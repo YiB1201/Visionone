@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉一中</title>
+    <link rel="icon" href="./images/Logo.png" type="image/png">
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* 顶部主菜单 */
+        header {
+            background-color: #007bff; /* 蓝色背景 */
+            color: white;
+            padding: 0 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 30px;
+            margin-right: 10px;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 20px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+            cursor: pointer;
+        }
+
+        nav a:hover {
+            opacity: 0.8;
+        }
+
+        /* 大字标题区域 (Hero Section) */
+        .hero-section {
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #2c3e50;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+        }
+
+        /* 每周精选 (照片栏位) */
+        .gallery-section {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            border-left: 5px solid #007bff;
+            padding-left: 10px;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5列 */
+            gap: 15px;
+        }
+
+        .photo-item {
+            background-color: #ddd;
+            aspect-ratio: 3/4; /* 竖版照片比例，可根据需要改为 1/1 或 16/9 */
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .photo-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-section {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            text-align: center; /* 让内部行内元素居中 */
+        }
+
+        .video-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .video-container {
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center;     /* 垂直居中 */
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 上方主菜单 -->
+    <header>
+        <div class="logo">
+            <img src="./images/Logo.png" alt="Logo">
+            <span>视觉一中</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./upload.html">上传</a></li>
+                <li><a href="./shows.html">画廊</a></li>
+                <!-- 关于按钮触发器 -->
+                <li><a href="#" id="about-trigger">关于</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- 下方大字标题 -->
+    <section class="hero-section">
+        <h1 class="hero-title">视觉一中——呼市一中学生的图片站</h1>
+    </section>
+
+    <!-- 每周精选 (5个照片栏位) -->
+    <section class="gallery-section" id="gallery">
+        <h2 class="section-title">每周精选</h2>
+        <div class="photo-grid">
+            <!-- 5个照片占位符 -->
+            <div class="photo-item">照片 1</div>
+            <div class="photo-item">照片 2</div>
+            <div class="photo-item">照片 3</div>
+            <div class="photo-item">照片 4</div>
+            <div class="photo-item">照片 5</div>
+        </div>
+    </section>
+
+    <section class="video-section">
+        <h2 class="video-title">呼和浩特市第一中学</h2>
+        <div class="video-container">
+            <iframe
+                src="https://player.bilibili.com/player.html?isOutside=true&aid=113961236173618&bvid=BV1QZNtevEbx&cid=25753886317&p=1"
+                scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"
+                width="100%"
+                height="600"
+>
+            </iframe>
+        </div>
+    </section>
+
+
+</div>
+    <script>
+        // 关于按钮触发器逻辑
+        document.getElementById('about-trigger').addEventListener('click', function(e) {
+            e.preventDefault(); // 阻止默认链接跳转
+            window.location.href = './about.html';
+            // 或者显示一个 modal
+        });
+    </script>
+
+</body>
+
+</html>

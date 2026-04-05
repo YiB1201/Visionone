@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉一中—图片上传</title>
+    <!-- 引入 ali-oss SDK -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.1.min.js"></script>
+    <link rel="stylesheet" href="./css/upload.css">
+    <link rel="icon" href="./images/Logo.png" type="image/png">
+</head>
+
+<body>
+
+    <!-- 统一顶部导航 -->
+    <header>
+        <div class="logo">
+            <img src="./images/Logo.png" alt="Logo">
+            <span>视觉一中</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./upload.html" style="opacity: 0.8; border-bottom: 2px solid white;">上传</a></li>
+                <li><a href="./shows.html">画廊</a></li>
+                <li><a href="./index.html">首页</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="upload-main-container">
+        <div class="upload-card">
+            <h2>📤 图片/视频上传</h2>
+
+            <!-- 拖拽/点击上传区域 -->
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon">☁️</div>
+                <div class="upload-text">点击或拖拽图片/视频到此处上传</div>
+                <input type="file" id="fileInput">
+            </div>
+            <div class="file-name" id="fileNameDisplay"></div>
+
+            <div class="meta-inputs">
+                <div style="margin-bottom: 15px;">
+                    <label for="imageTitle" class="meta-label">图片标题</label>
+                    <input type="text" id="imageTitle" class="meta-input" placeholder="请输入图片标题，不填则为文件名">
+                </div>
+                <div>
+                    <label for="authorName" class="meta-label">作者昵称</label>
+                    <input type="text" id="authorName" class="meta-input" placeholder="请输入作者昵称，不填则为匿名">
+                </div>
+            </div>
+
+            <button class="btn-upload" onclick="handleUpload()" id="uploadBtn">开始上传</button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+                <span class="progress-text" id="progressText">准备上传...</span>
+            </div>
+
+            <!-- 结果展示 -->
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗 HTML -->
+    <div id="successModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-title">✅ 上传成功！</div>
+            <div class="modal-countdown">
+                <span id="countdownText">5</span> 秒后自动前往画廊...
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-secondary" onclick="stayAndUpload()">继续上传</button>
+                <button class="btn-modal btn-primary" onclick="goToGallery()">查看画廊</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/upload.js"></script>
+</body>
+
+</html>

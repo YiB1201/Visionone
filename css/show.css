@@ -1,0 +1,312 @@
+/* shows.css */
+:root {
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --bg-color: #f5f5f5;
+    --card-bg: rgba(255, 255, 255, 0.35);
+    /* 半透明白色 */
+    --text-color: #333;
+    --header-height: 60px;
+}
+
+body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background-image: url('../images/background1.JPG');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 复用 index.html 的 Header 样式 */
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0 20px;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.logo img {
+    height: 30px;
+    margin-right: 10px;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: opacity 0.3s;
+    cursor: pointer;
+}
+
+nav a:hover {
+    opacity: 0.8;
+}
+
+/* 主内容区域 */
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    flex: 1;
+    width: 100%;
+}
+
+.page-title-section {
+    text-align: center;
+    margin-bottom: 40px;
+    /* 给标题也加一点毛玻璃背景，防止背景图太花导致文字看不清 */
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(5px);
+    padding: 20px;
+    border-radius: 12px;
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.page-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5);
+    /* 文字阴影增强可读性 */
+}
+
+.page-subtitle {
+    color: #555;
+    font-size: 1rem;
+}
+
+.controls {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.btn-refresh {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s, transform 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-refresh:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.btn-refresh:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 图片网格布局 */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+/* 【核心修改】图片卡片样式 - 毛玻璃效果 */
+.image-card {
+    /* 半透明背景 */
+    background: var(--card-bg);
+    /* 关键：背景模糊 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    /* Safari 支持 */
+
+    border-radius: 16px;
+    overflow: hidden;
+    /* 柔和的白色边框，增强玻璃质感 */
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    /* 更自然的阴影 */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.image-card:hover {
+    transform: translateY(-8px);
+    /* 悬停时背景更不透明一点，突出内容 */
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+.img-wrapper {
+    width: 100%;
+    padding-top: 75%;
+    /* 4:3 比例 */
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.05);
+    /* 加载前的占位色 */
+}
+
+.img-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+    transition: opacity 0.3s;
+}
+
+.file-info {
+    padding: 15px;
+    /* 移除之前的白色背景和边框，让它成为卡片的一部分 */
+    background: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    /* 极淡的分隔线 */
+}
+
+.file-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    /* 深色文字 */
+    margin-bottom: 5px;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-author {
+    font-size: 0.85rem;
+    color: #666;
+    /* 稍深一点的灰色，确保在玻璃背景上可见 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.like-btn {
+    transition: transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.like-btn:hover {
+    transform: scale(1.1);
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.like-btn:active {
+    transform: scale(0.95);
+}
+
+.loading-tip {
+    text-align: center;
+    color: #fff;
+    /* 在深色背景图上用白色文字，或者加文字阴影 */
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    margin-top: 50px;
+    font-size: 1.1rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px 20px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    width: fit-content;
+}
+
+.error-tip {
+    text-align: center;
+    color: #fff;
+    background: rgba(231, 76, 60, 0.9);
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    backdrop-filter: blur(5px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    .main-container {
+        padding: 20px 10px;
+    }
+}
+
+.video-cover-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 75%; /* 保持 4:3 比例，与图片一致 */
+    background-color: #222; /* 深色背景 */
+    overflow: hidden;
+}
+
+/* 确保播放图标居中 */
+.video-cover-wrapper img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* 移除 object-fit，因为这是绝对定位的图标 */
+}
+
+/* 确保点赞按钮在视频卡片上也能正常点击 */
+.like-btn {
+    z-index: 10; /* 确保在最上层 */
+    position: relative;
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉一中—画廊</title>
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    <link rel="stylesheet" href="./css/show.css">
+    <link rel="icon" href="./images/Logo.png" type="image/png">
+</head>
+
+<body>
+
+    <!-- 统一顶部导航 -->
+    <header>
+        <div class="logo">
+            <img src="./images/Logo.png" alt="Logo">
+            <span>视觉一中</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./upload.html">上传</a></li>
+                <li><a href="./shows.html" style="opacity: 0.8; border-bottom: 2px solid white;">画廊</a></li>
+                <li><a href="./index.html">首页</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+
+        <div class="page-title-section">
+            <h1 class="page-title">🖼️ 视觉一中画廊</h1>
+        </div>
+
+        <div class="controls">
+            <button class="btn-refresh" onclick="loadImages()" id="refreshBtn">🔄 刷新列表</button>
+        </div>
+
+        <div id="gallery" class="gallery-grid"></div>
+
+        <div id="statusMsg" class="loading-tip">正在初始化...</div>
+    </div>
+
+    <!-- 引入外部 JS -->
+    <script src="./js/show.js"></script>
+</body>
+
+</html>

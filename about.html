@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉一中—关于</title>
+    <!-- 引入外部 CSS (复用 show.css 的基础样式) -->
+    <link rel="stylesheet" href="./css/show.css">
+
+    <style>
+        /* 针对 About 页面的特定样式 */
+        body {
+            /* 设置指定背景图 */
+            background-image: url('./images/background2.JPG');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .about-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .about-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 60px 40px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .about-title {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .about-text {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 40px;
+            color: #f0f0f0;
+        }
+
+        .highlight {
+            color: #ffd700;
+            /* 金色高亮关键信息 */
+            font-weight: bold;
+        }
+
+        /* 【新增】联系方式样式 */
+        .contact-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .contact-label {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 5px;
+        }
+
+        .wechat-id {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: inline-block;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .wechat-id:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-home {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            margin-top: 20px;
+            /* 增加一点间距 */
+        }
+
+        .btn-home:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .about-card {
+                padding: 40px 20px;
+            }
+
+            .about-title {
+                font-size: 1.8rem;
+            }
+
+            .about-text {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 统一顶部导航 -->
+    <header>
+        <div class="logo">
+            <img src="./images/Logo.png" alt="Logo">
+            <span>视觉一中</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./upload.html">上传</a></li>
+                <li><a href="./shows.html">画廊</a></li>
+                <li><a href="./index.html">首页</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- 主内容区 -->
+    <div class="about-container">
+        <div class="about-card">
+            <h1 class="about-title">👋 你好，欢迎来到视觉一中</h1>
+
+            <p class="about-text">
+                这里是一个属于呼和浩特第一中学学生的自由空间。<br><br>
+                我们承诺：<span class="highlight">这里没有强制收费</span>。<br>
+                你可以随意分享你在校园里的所见所闻，<br>
+                无论是操场上的夕阳，还是教室里的日常。<br>
+                让瞬间成为永恒，让记忆有迹可循。
+            </p>
+
+            <!-- 【新增】联系方式区域 -->
+            <div class="contact-section">
+                <div class="contact-label">如有问题或建议，请联系管理员：</div>
+                <!-- 请在这里替换为你真实的微信号 -->
+                <div class="wechat-id" onclick="copyWeChat()" title="点击复制微信号">
+                    📞 微信: YourWeChatID
+                </div>
+            </div>
+
+            <a href="./index.html" class="btn-home">返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        // 【新增】点击复制微信号功能
+        function copyWeChat() {
+            // 请在这里替换为你真实的微信号
+            const wechatId = "LiuYongkang3567";
+
+            navigator.clipboard.writeText(wechatId).then(() => {
+                alert("微信号已复制：" + wechatId);
+            }).catch(err => {
+                console.error('复制失败', err);
+                alert("复制失败，请手动记录：" + wechatId);
+            });
+        }
+    </script>
+
+</body>
+
+</html>
