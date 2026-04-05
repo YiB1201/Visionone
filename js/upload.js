@@ -180,8 +180,17 @@ function goToGallery() {
 
 async function handleUpload() {
     const file = fileInput.files[0];
+    
+    // 【新增】1. 检查是否选择了文件
     if (!file) {
         alert('请先选择文件');
+        return;
+    }
+
+    // 【新增】2. 限制文件大小为 100MB (100 * 1024 * 1024 bytes)
+    const MAX_SIZE = 100 * 1024 * 1024; 
+    if (file.size > MAX_SIZE) {
+        alert(`文件大小超过限制！\n当前大小: ${(file.size / 1024 / 1024).toFixed(2)} MB\n最大允许: 100 MB`);
         return;
     }
     
@@ -214,11 +223,13 @@ async function handleUpload() {
         }
 
         let objectKey = '';
-        let metaKey = ''; // 【新增】用于元数据索引的 Key
+        let metaKey = ''; 
 
         if (isVideo) {
             progressText.innerText = '正在上传视频...';
-            // 1. 获取视频上传后的实际路径
+            // 注意：这里保留你原有的逻辑，但建议确认 uploadVideoWithFolder 返回的路径是否正确
+            // 原有代码中 return `videos/${file.name}` 可能会导致不同日期的同名文件冲突或路径错误
+            // 建议改为返回实际的 storeAs 路径，见下方补充建议
             const videoPath = await uploadVideoWithFolder(file);
             objectKey = videoPath;
             metaKey = videoPath.replace(/\.[^/.]+$/, ".m3u8"); 
@@ -227,12 +238,11 @@ async function handleUpload() {
         } else if (isImage) {
             progressText.innerText = '正在上传图片...';
             objectKey = await uploadImage(file);
-            metaKey = objectKey; // 图片 Key 不变
+            metaKey = objectKey; 
         }
 
         progressText.innerText = '正在保存信息...';
         
-        // 3. 使用 metaKey (即 .m3u8 的路径) 更新索引
         await updateMetadataIndex(metaKey, customTitle, author);
 
         const fullUrl = `https://${buckets}.${regionHost}/${objectKey}`;
