@@ -127,6 +127,111 @@
             .about-text {
                 font-size: 1rem;
             }
+                    /* 【新增】赞助按钮样式 */
+        .btn-sponsor {
+            display: inline-block;
+            background-color: #ff9800; /* 橙色，区别于首页按钮 */
+            color: white;
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+            margin-top: 15px;
+            margin-bottom: 20px; /* 与返回首页按钮保持间距 */
+        }
+
+        .btn-sponsor:hover {
+            background-color: #e68900;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+        }
+
+        /* 【新增】模态框样式 */
+        .modal-overlay {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6); /* 黑色半透明背景 */
+            backdrop-filter: blur(5px); /* 背景模糊效果 */
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #ff9800;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #000;
+        }
+
+        .qr-code-container {
+            margin: 20px 0;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .qr-code-img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .scan-tip {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0;
+        }
         }
     </style>
 </head>
@@ -169,8 +274,25 @@
                     📞 微信: LiuYongkang3567
                 </div>
             </div>
+            <!-- 在 .about-card 内部，btn-home 之前添加 -->
+            <button class="btn-sponsor" onclick="openSponsorModal()">☕ 请我喝杯咖啡 (赞助)</button>
 
             <a href="./index.html" class="btn-home">返回首页</a>
+        </div>
+
+        <div id="sponsorModal" class="modal-overlay" onclick="closeSponsorModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <span class="close-btn" onclick="closeSponsorModal()">&times;</span>
+                <h2>感谢您的支持！</h2>
+                <p>您的赞助将用于维持服务器运行及网站开发。</p>
+        
+                <!-- 请替换为您的真实收款码图片路径 -->
+                <div class="qr-code-container">
+                    <img src="./images/qrcode.png" alt="收款码" class="qr-code-img">
+                </div>
+        
+                <p class="scan-tip">长按识别二维码或截图保存</p>
+            </div>
         </div>
     </div>
 
@@ -186,6 +308,28 @@
                 console.error('复制失败', err);
                 alert("复制失败，请手动记录：" + wechatId);
             });
+        }
+
+        function openSponsorModal() {
+            const modal = document.getElementById('sponsorModal');
+            modal.style.display = 'flex';
+            // 强制重绘以触发 transition
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        function closeSponsorModal(event) {
+            // 如果传入了 event 且点击的是遮罩层本身，或者没有传入 event (点击关闭按钮)
+            if (!event || event.target.id === 'sponsorModal') {
+                const modal = document.getElementById('sponsorModal');
+                modal.classList.remove('show');
+
+                // 等待动画结束后隐藏 display
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+            }
         }
     </script>
 
