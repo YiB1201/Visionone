@@ -65,33 +65,43 @@
             font-weight: bold;
         }
 
-        /* 【新增】联系方式样式 */
+        /* 【修改】联系方式样式 */
         .contact-section {
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .contact-label {
             font-size: 0.9rem;
             color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 5px;
+            margin-bottom: 15px;
         }
 
-        .wechat-id {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 5px 15px;
-            border-radius: 15px;
-            display: inline-block;
+        /* 新增：联系二维码容器样式 */
+        .contact-qr-container {
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
             cursor: pointer;
-            transition: background 0.3s;
+            /* 提示可点击 */
         }
 
-        .wechat-id:hover {
-            background: rgba(0, 0, 0, 0.4);
+        .contact-qr-container:hover {
+            transform: scale(1.05);
+        }
+
+        .contact-qr-img {
+            width: 150px;
+            /* 根据需要调整大小 */
+            height: 150px;
+            object-fit: contain;
+            display: block;
         }
 
         .btn-home {
@@ -104,8 +114,8 @@
             font-weight: bold;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-            margin-top: 20px;
-            /* 增加一点间距 */
+            margin-top: 30px;
+            /* 增加间距，因为去掉了微信号按钮 */
         }
 
         .btn-home:hover {
@@ -113,9 +123,11 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
         }
-                .btn-sponsor {
+
+        .btn-sponsor {
             display: inline-block;
-            background-color: #ff9800; /* 橙色，区别于首页按钮 */
+            background-color: #ff9800;
+            /* 橙色，区别于首页按钮 */
             color: white;
             padding: 10px 25px;
             border-radius: 30px;
@@ -126,7 +138,8 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
             margin-top: 15px;
-            margin-bottom: 20px; /* 与返回首页按钮保持间距 */
+            margin-bottom: 20px;
+            /* 与返回首页按钮保持间距 */
         }
 
         .btn-sponsor:hover {
@@ -135,18 +148,23 @@
             box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
         }
 
-        /* 【修改】模态框样式 */
+        /* 【通用】模态框样式 */
         .modal-overlay {
-            display: none; /* 默认隐藏 */
-            position: fixed; /* 关键：固定定位 */
-            z-index: 9999; /* 提高层级，确保在所有元素之上 */
+            display: none;
+            /* 默认隐藏 */
+            position: fixed;
+            /* 关键：固定定位 */
+            z-index: 9999;
+            /* 提高层级，确保在所有元素之上 */
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0, 0, 0, 0.6); /* 黑色半透明背景 */
-            backdrop-filter: blur(5px); /* 背景模糊效果 */
+            background-color: rgba(0, 0, 0, 0.8);
+            /*黑色半透明背景稍微加深一点以便看清图片*/
+            backdrop-filter: blur(5px);
+            /* 背景模糊效果 */
             justify-content: center;
             align-items: center;
             opacity: 0;
@@ -173,6 +191,26 @@
             /* 添加以下属性，防止被父级裁剪 */
             transform-origin: center center;
         }
+
+        /* 专门用于放大查看二维码的模态框内容样式 */
+        .modal-qr-content {
+            background: transparent;
+            box-shadow: none;
+            max-width: 90%;
+            padding: 10px;
+        }
+
+        .modal-qr-img {
+            max-width: 100%;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background: #fff;
+            padding: 10px;
+        }
+
         .qr-code-container {
             margin: 20px 0;
             padding: 10px;
@@ -185,10 +223,28 @@
         }
 
         .qr-code-img {
-            width: 100%; /* 改为 100%，自适应容器 */
-            height: auto; /* 保持宽高比 */
-            object-fit: contain; /* 确保图片完整显示 */
+            width: 100%;
+            /* 改为 100%，自适应容器 */
+            height: auto;
+            /* 保持宽高比 */
+            object-fit: contain;
+            /* 确保图片完整显示 */
             display: block;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #333;
         }
 
         /* 移动端适配 */
@@ -203,6 +259,11 @@
 
             .about-text {
                 font-size: 1rem;
+            }
+
+            .contact-qr-img {
+                width: 120px;
+                height: 120px;
             }
         }
     </style>
@@ -238,45 +299,70 @@
                 让瞬间成为永恒，让记忆有迹可循。
             </p>
 
-            <!-- 【新增】联系方式区域 -->
+            <!-- 【修改】联系方式区域：改为展示二维码，点击可放大 -->
             <div class="contact-section">
-                <div class="contact-label">如有问题或建议，请联系管理员：</div>
-                <!-- 请在这里替换为你真实的微信号 -->
-                <div class="wechat-id" onclick="copyWeChat()" title="点击复制微信号">
-                    📞 微信: LiuYongkang3567
+                <div class="contact-label">如有问题或建议，扫码添加管理员好友：<br><span
+                        style="font-size: 0.8em; opacity: 0.7;">(点击图片可放大查看)</span></div>
+                <!-- 请确保 ./images/friend_qr.png 是您添加的二维码图片路径 -->
+                <div class="contact-qr-container" onclick="openContactQrModal()">
+                    <img src="./images/friend_qr.png" alt="管理员微信二维码" class="contact-qr-img">
                 </div>
             </div>
-            <!-- 在 .about-card 内部，btn-home 之前添加 -->
+
             <button class="btn-sponsor" onclick="openSponsorModal()">☕ 请我喝杯咖啡 (赞助)</button>
 
             <a href="./index.html" class="btn-home">返回首页</a>
         </div>
+
+        <!-- 赞助模态框 -->
         <div id="sponsorModal" class="modal-overlay" onclick="closeSponsorModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
                 <span class="close-btn" onclick="closeSponsorModal()">&times;</span>
                 <h2>感谢您的支持！</h2>
                 <p>您的赞助将用于维持服务器运行及网站开发。</p>
-        
+
                 <div class="qr-code-container">
                     <img src="./images/qrcode.jpg" alt="收款码" class="qr-code-img">
                 </div>
-        
+
                 <p class="scan-tip">长按识别二维码或截图保存</p>
             </div>
         </div>
 
-    <script>
-        // 【新增】点击复制微信号功能
-        function copyWeChat() {
-            // 请在这里替换为你真实的微信号
-            const wechatId = "LiuYongkang3567";
+        <!-- 【新增】联系二维码放大模态框 -->
+        <div id="contactQrModal" class="modal-overlay" onclick="closeContactQrModal(event)">
+            <div class="modal-content modal-qr-content" onclick="event.stopPropagation()">
+                <span class="close-btn" style="color: #fff; text-shadow: 0 0 5px #000;"
+                    onclick="closeContactQrModal()">&times;</span>
+                <img src="./images/friend_qr.png" alt="管理员微信二维码大图" class="modal-qr-img">
+                <p style="color: #fff; margin-top: 10px; text-shadow: 0 0 5px #000;">长按识别二维码添加好友</p>
+            </div>
+        </div>
+    </div>
 
-            navigator.clipboard.writeText(wechatId).then(() => {
-                alert("微信号已复制：" + wechatId);
-            }).catch(err => {
-                console.error('复制失败', err);
-                alert("复制失败，请手动记录：" + wechatId);
-            });
+    <script>
+        // 【新增】打开联系二维码模态框
+        function openContactQrModal() {
+            const modal = document.getElementById('contactQrModal');
+            modal.style.display = 'flex';
+            // 强制重绘以触发 transition
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        // 【新增】关闭联系二维码模态框
+        function closeContactQrModal(event) {
+            // 如果传入了 event 且点击的是遮罩层本身，或者没有传入 event (点击关闭按钮)
+            if (!event || event.target.id === 'contactQrModal') {
+                const modal = document.getElementById('contactQrModal');
+                modal.classList.remove('show');
+
+                // 等待动画结束后隐藏 display
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+            }
         }
 
         function openSponsorModal() {
