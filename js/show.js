@@ -1,7 +1,5 @@
 // shows.js
 let client = null;
-let bucket = '';
-let region = '';
 
 // STS 签名接口地址
 const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
@@ -17,27 +15,36 @@ const SYNC_DELAY = 5000; // 停止点赞 2 秒后同步
 
 // 1. 初始化 OSS Client
 async function initOSS() {
-    if (client) return true;
+    if (client) return true; // 如果当前页面实例中已经初始化，直接返回
+    
     try {
         document.getElementById('statusMsg').innerText = '正在获取授权...';
-        const response = await fetch(STS_API_URL, { method: 'POST' });
-        if (!response.ok) throw new Error('网络请求失败');
         
-        const data = await response.json();
-        const { accessKeyId, accessKeySecret, stsToken, region: r, bucket: b } = data;
+        // 使用统一的凭证获取函数
+        const creds = await getStsCredentials();
         
-        bucket = b;
-        region = r;
+        const { accessKeyId, accessKeySecret, stsToken, region, bucket } = creds;
+        
+        // 更新全局变量以便其他地方使用（如生成 URL）
+        window.ossBucket = bucket; 
+        window.ossRegion = region;
 
         client = new OSS({
-            region: r,
-            bucket: b,
+            region: region,
+            bucket: bucket,
             accessKeyId: accessKeyId,
             accessKeySecret: accessKeySecret,
             stsToken: stsToken,
             refreshSTSToken: async () => {
+                // 刷新时也应该走统一逻辑，但通常 refreshSTSToken 内部需要直接请求 API
+                // 这里为了简单，我们直接请求 API 刷新，不经过缓存，因为刷新意味着旧凭证必废
+                const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
                 const res = await fetch(STS_API_URL, { method: 'POST' });
                 const d = await res.json();
+                
+                // 刷新后更新缓存，保证其他标签页或后续操作拿到最新凭证
+                sessionStorage.setItem('oss_sts_credentials_v1', JSON.stringify(d));
+                
                 return {
                     accessKeyId: d.accessKeyId,
                     accessKeySecret: d.accessKeySecret,
@@ -45,6 +52,7 @@ async function initOSS() {
                 };
             }
         });
+        
         console.log('OSS 初始化成功');
         return true;
     } catch (err) {
@@ -158,12 +166,6 @@ async function loadImages() {
 
         // 3. 同步远程元数据 (保持不变，但要注意 index.json 需要包含视频的元数据)
         try {
-            // 假设 videos 也有一个 index.json 或者统一放在根目录/各自目录下？
-            // 这里假设你仍然使用统一的 images/index.json 或者你需要创建 videos/index.json
-            // 为了简化，我们尝试读取两个可能的元数据文件，或者你可以约定统一存储结构
-            
-            // 方案 A: 如果只有一个总的 index.json (例如在根目录或 images 下包含所有引用)
-            // 方案 B (推荐): 分别读取。这里演示读取 images/index.json 和 videos/index.json 并合并
             
             let remoteMetaList = [];
 
@@ -288,7 +290,7 @@ function renderGallery(files, metadataMap={}) {
         // 添加指针样式，提示可点击
         card.style.cursor = 'pointer';
 
-        const fileUrl = `https://${bucket}.${region}.aliyuncs.com/${file.name}`;
+        const fileUrl = `https://${window.ossBucket}.${window.ossRegion}.aliyuncs.com/${file.name}`;
         const isVideo = file.name.toLowerCase().endsWith('.m3u8');
         
         const meta = metadataMap[file.name] || {};
