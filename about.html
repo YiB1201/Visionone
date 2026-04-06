@@ -113,22 +113,7 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
         }
-
-        /* 移动端适配 */
-        @media (max-width: 768px) {
-            .about-card {
-                padding: 40px 20px;
-            }
-
-            .about-title {
-                font-size: 1.8rem;
-            }
-
-            .about-text {
-                font-size: 1rem;
-            }
-                    /* 【新增】赞助按钮样式 */
-        .btn-sponsor {
+                .btn-sponsor {
             display: inline-block;
             background-color: #ff9800; /* 橙色，区别于首页按钮 */
             color: white;
@@ -150,11 +135,11 @@
             box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
         }
 
-        /* 【新增】模态框样式 */
+        /* 【修改】模态框样式 */
         .modal-overlay {
             display: none; /* 默认隐藏 */
-            position: fixed;
-            z-index: 1000;
+            position: fixed; /* 关键：固定定位 */
+            z-index: 9999; /* 提高层级，确保在所有元素之上 */
             left: 0;
             top: 0;
             width: 100%;
@@ -185,32 +170,9 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             transform: scale(0.9);
             transition: transform 0.3s ease;
+            /* 添加以下属性，防止被父级裁剪 */
+            transform-origin: center center;
         }
-
-        .modal-overlay.show .modal-content {
-            transform: scale(1);
-        }
-
-        .modal-content h2 {
-            margin-top: 0;
-            color: #ff9800;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .close-btn:hover {
-            color: #000;
-        }
-
         .qr-code-container {
             margin: 20px 0;
             padding: 10px;
@@ -218,20 +180,30 @@
             border: 1px solid #eee;
             border-radius: 10px;
             display: inline-block;
+            /* 增加最大宽度限制 */
+            max-width: 100%;
         }
 
         .qr-code-img {
-            width: 200px;
-            height: 200px;
-            object-fit: contain;
+            width: 100%; /* 改为 100%，自适应容器 */
+            height: auto; /* 保持宽高比 */
+            object-fit: contain; /* 确保图片完整显示 */
             display: block;
         }
 
-        .scan-tip {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 0;
-        }
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .about-card {
+                padding: 40px 20px;
+            }
+
+            .about-title {
+                font-size: 1.8rem;
+            }
+
+            .about-text {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -271,7 +243,7 @@
                 <div class="contact-label">如有问题或建议，请联系管理员：</div>
                 <!-- 请在这里替换为你真实的微信号 -->
                 <div class="wechat-id" onclick="copyWeChat()" title="点击复制微信号">
-                    📞 微信: LiuYongkang3567
+                    📞 微信: LiuYongkang67
                 </div>
             </div>
             <!-- 在 .about-card 内部，btn-home 之前添加 -->
@@ -279,22 +251,19 @@
 
             <a href="./index.html" class="btn-home">返回首页</a>
         </div>
-
         <div id="sponsorModal" class="modal-overlay" onclick="closeSponsorModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
                 <span class="close-btn" onclick="closeSponsorModal()">&times;</span>
                 <h2>感谢您的支持！</h2>
                 <p>您的赞助将用于维持服务器运行及网站开发。</p>
         
-                <!-- 请替换为您的真实收款码图片路径 -->
                 <div class="qr-code-container">
-                    <img src="./images/qrcode.png" alt="收款码" class="qr-code-img">
+                    <img src="./images/qrcode.jpg" alt="收款码" class="qr-code-img">
                 </div>
         
                 <p class="scan-tip">长按识别二维码或截图保存</p>
             </div>
         </div>
-    </div>
 
     <script>
         // 【新增】点击复制微信号功能
