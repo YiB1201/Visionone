@@ -44,15 +44,15 @@ dropZone.addEventListener('drop', (e) => {
 
 //获取 STS 签名并初始化 OSS Client
 async function initOSSClient() {
+    if (client) return; // 防止重复初始化
+
     try {
-        const response = await fetch('https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run', {
-            method: 'POST'
-        });
-
-        if (!response.ok) throw new Error('获取签名失败');
-
-        const stsData = await response.json();
+        // 使用统一的凭证获取函数
+        const stsData = await getStsCredentials();
+        
         const { region, bucket, accessKeyId, accessKeySecret, stsToken } = stsData;
+        
+        // 更新全局变量供上传使用
         regionHost = `${region}.aliyuncs.com`;
         buckets = bucket;
 
@@ -63,18 +63,24 @@ async function initOSSClient() {
             accessKeySecret: accessKeySecret,
             stsToken: stsToken,
             refreshSTSToken: async () => {
-                const freshResponse = await fetch('https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run', { method: 'POST' });
+                // 刷新逻辑同上
+                const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
+                const freshResponse = await fetch(STS_API_URL, { method: 'POST' });
                 const freshData = await freshResponse.json();
+                
+                // 更新缓存
+                sessionStorage.setItem('oss_sts_credentials_v1', JSON.stringify(freshData));
+
                 return {
                     accessKeyId: freshData.accessKeyId,
                     accessKeySecret: freshData.accessKeySecret,
                     stsToken: freshData.stsToken
                 };
             },
-            refreshSTSTokenInterval: 300000
+            refreshSTSTokenInterval: 300000 // 5分钟刷新一次
         });
 
-        console.log('OSS Client 初始化成功');
+        console.log('OSS Client 初始化成功 (使用缓存或新凭证)');
     } catch (err) {
         console.error('初始化 OSS 失败:', err);
         alert('初始化上传环境失败，请检查网络或后端服务');
