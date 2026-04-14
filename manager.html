@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资源索引管理 - Admin</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --danger-color: #dc3545;
+            --success-color: #28a745;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: #666;
+        }
+
+        .btn-outline:hover {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--primary-color);
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        /* Table */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .key-cell {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #6c757d;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Status & Loading */
+        .status-bar {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        #loadingText {
+            margin-top: 15px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <!-- 1. 引入 OSS SDK -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.1.min.js"></script>
+    <!-- 2. 引入工具函数 (必须先于 upload.js) -->
+    <script src="./js/utils.js"></script>
+    <!-- 3. 引入上传逻辑 (包含 initOSSClient 和全局变量 client) -->
+    <script src="./js/upload.js"></script>
+</head>
+
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div id="loadingText">处理中...</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>📂 资源索引管理</h1>
+            <div class="btn-group">
+                <button class="btn-outline" onclick="loadData()">🔄 刷新重置</button>
+                <button class="btn-success" onclick="saveAllChanges()" id="saveBtn">💾 保存更改并删除文件</button>
+            </div>
+        </header>
+
+        <div id="statusBar" class="status-bar"></div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('images')" id="tab-images">图片索引</div>
+            <div class="tab" onclick="switchTab('videos')" id="tab-videos">视频索引</div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">文件路径 (Key)</th>
+                        <th style="width: 25%;">标题 (Title)</th>
+                        <th style="width: 15%;">作者 (Author)</th>
+                        <th style="width: 10%;">点赞 (Likes)</th>
+                        <th style="width: 15%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- 数据行 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 状态管理
+        let currentType = 'images'; // 'images' or 'videos'
+        let imagesData = [];
+        let videosData = [];
+
+        // 【新增】用于追踪被删除的文件 Key，以便在保存时执行物理删除
+        let deletedKeys = [];
+
+        // 页面加载初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            showLoading(true, '初始化连接...');
+            try {
+                // 1. 初始化 OSS Client (复用 upload.js 中的逻辑)
+                if (typeof initOSSClient === 'function') {
+                    await initOSSClient();
+                } else {
+                    throw new Error('initOSSClient 未找到，请检查 js/upload.js 和 js/utils.js 是否正确加载');
+                }
+
+                // 2. 加载数据
+                await loadData();
+            } catch (err) {
+                console.error(err);
+                showStatus('初始化失败: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // 切换标签
+        function switchTab(type) {
+            currentType = type;
+
+            // 更新 UI 样式
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${type}`).classList.add('active');
+
+            // 重新渲染表格
+            renderTable();
+        }
+
+        // 从 OSS 加载数据
+        async function loadData() {
+            showLoading(true, '正在同步云端数据...');
+            // 重置删除记录
+            deletedKeys = [];
+
+            try {
+                // 并行请求两个索引文件
+                const [imgResult, vidResult] = await Promise.allSettled([
+                    client.get('images/index.json'),
+                    client.get('videos/index.json')
+                ]);
+
+                // 处理图片索引
+                if (imgResult.status === 'fulfilled') {
+                    const content = new TextDecoder("utf-8").decode(imgResult.value.content);
+                    imagesData = JSON.parse(content);
+                    if (!Array.isArray(imagesData)) imagesData = [];
+                } else {
+                    console.warn('Images index load failed', imgResult.reason);
+                    imagesData = [];
+                }
+
+                // 处理视频索引
+                if (vidResult.status === 'fulfilled') {
+                    const content = new TextDecoder("utf-8").decode(vidResult.value.content);
+                    videosData = JSON.parse(content);
+                    if (!Array.isArray(videosData)) videosData = [];
+                } else {
+                    console.warn('Videos index load failed', vidResult.reason);
+                    videosData = [];
+                }
+
+                renderTable();
+                showStatus('数据同步成功', 'success');
+            } catch (err) {
+                showStatus('加载数据出错: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const data = currentType === 'images' ? imagesData : videosData;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color:#999;">暂无数据</td></tr>`;
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+
+                // 1. Key (只读)
+                const tdKey = document.createElement('td');
+                tdKey.className = 'key-cell';
+                tdKey.textContent = item.key;
+                tdKey.title = item.key; // Tooltip
+
+                // 2. Title (可编辑)
+                const tdTitle = document.createElement('td');
+                const inputTitle = document.createElement('input');
+                inputTitle.type = 'text';
+                inputTitle.value = item.title || '';
+                inputTitle.onchange = (e) => { data[index].title = e.target.value; };
+                tdTitle.appendChild(inputTitle);
+
+                // 3. Author (可编辑)
+                const tdAuthor = document.createElement('td');
+                const inputAuthor = document.createElement('input');
+                inputAuthor.type = 'text';
+                inputAuthor.value = item.author || '';
+                inputAuthor.onchange = (e) => { data[index].author = e.target.value; };
+                tdAuthor.appendChild(inputAuthor);
+
+                // 4. Likes (可编辑)
+                const tdLikes = document.createElement('td');
+                const inputLikes = document.createElement('input');
+                inputLikes.type = 'number';
+                inputLikes.value = item.likes || 0;
+                inputLikes.onchange = (e) => { data[index].likes = parseInt(e.target.value) || 0; };
+                tdLikes.appendChild(inputLikes);
+
+                // 5. Actions
+                const tdAction = document.createElement('td');
+                const btnDel = document.createElement('button');
+                btnDel.textContent = '移除';
+                btnDel.className = 'btn-danger';
+                btnDel.style.fontSize = '0.8rem';
+                btnDel.style.padding = '4px 8px';
+                // 传递 index 和 key
+                btnDel.onclick = () => handleRemoveFromList(index, item.key);
+                tdAction.appendChild(btnDel);
+
+                tr.append(tdKey, tdTitle, tdAuthor, tdLikes, tdAction);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 【修改】仅从内存列表中移除，并记录待删除 Key
+        function handleRemoveFromList(index, key) {
+            if (!confirm(`确定要从列表中移除此条目吗？\n\n注意：文件将在点击“保存更改”后真正从 OSS 删除。`)) {
+                return;
+            }
+
+            const data = currentType === 'images' ? imagesData : videosData;
+
+            // 1. 记录要删除的 Key
+            deletedKeys.push(key);
+
+            // 2. 从当前视图的数据源中移除
+            data.splice(index, 1);
+
+            // 3. 刷新表格
+            renderTable();
+
+            showStatus(`已移除 1 项。共标记 ${deletedKeys.length} 个文件待删除。请点击保存生效。`, 'info');
+        }
+
+        // 【修改】保存时先删除文件，再更新索引
+        async function saveAllChanges() {
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerText;
+
+            if (deletedKeys.length > 0) {
+                if (!confirm(`即将永久删除 ${deletedKeys.length} 个文件并更新索引。此操作不可恢复，确定继续吗？`)) {
+                    return;
+                }
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerText = '处理中...';
+            showLoading(true, '正在删除 OSS 文件...');
+
+            try {
+                // 1. 批量删除 OSS 文件
+                if (deletedKeys.length > 0) {
+                    for (let i = 0; i < deletedKeys.length; i++) {
+                        const key = deletedKeys[i];
+                        document.getElementById('loadingText').innerText = `正在删除文件 (${i + 1}/${deletedKeys.length}): ${key}`;
+                        try {
+                            await client.delete(key);
+                            console.log(`Deleted: ${key}`);
+                        } catch (delErr) {
+                            console.error(`Failed to delete ${key}:`, delErr);
+                            // 可以选择抛出错误中断流程，或者记录错误继续
+                            throw new Error(`删除文件失败: ${key}. 请检查权限或网络连接。`);
+                        }
+                    }
+                }
+
+                // 2. 保存 Images Index
+                document.getElementById('loadingText').innerText = '正在更新图片索引...';
+                const imgBlob = new Blob([JSON.stringify(imagesData, null, 2)], { type: 'application/json' });
+                await client.put('images/index.json', imgBlob);
+
+                // 3. 保存 Videos Index
+                document.getElementById('loadingText').innerText = '正在更新视频索引...';
+                const vidBlob = new Blob([JSON.stringify(videosData, null, 2)], { type: 'application/json' });
+                await client.put('videos/index.json', vidBlob);
+
+                // 4. 清空删除记录
+                deletedKeys = [];
+
+                showStatus('✅ 文件已删除，索引已更新', 'success');
+            } catch (err) {
+                console.error(err);
+                showStatus('❌ 操作失败: ' + err.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
+                showLoading(false);
+            }
+        }
+
+        // UI 辅助函数
+        function showLoading(show, text = '处理中...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const txt = document.getElementById('loadingText');
+            txt.innerText = text;
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('statusBar');
+            el.textContent = msg;
+            el.className = `status-bar status-${type}`;
+            el.style.display = 'block';
+
+            // 3秒后自动隐藏成功/信息消息
+            if (type !== 'error') {
+                setTimeout(() => {
+                    el.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+
+</body>
+
+</html>

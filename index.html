@@ -7,7 +7,6 @@
     <title>视觉一中</title>
     <link rel="icon" href="./images/Logo.png" type="image/png">
     <style>
-        /* 全局重置 */
         * {
             margin: 0;
             padding: 0;
@@ -141,6 +140,60 @@
             justify-content: center; /* 水平居中 */
             align-items: center;     /* 垂直居中 */
         }
+        /* 新增：图片项相对定位，以便内部绝对定位点赞数 */
+        .photo-item {
+            position: relative; /* 关键：作为定位父级 */
+            background-color: #ddd;
+            aspect-ratio: 3/4;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 新增：点赞数标签样式 */
+        .like-badge {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            backdrop-filter: blur(2px);
+            z-index: 10;
+        }
+        
+        .like-badge::before {
+            content: '❤️';
+            font-size: 0.9rem;
+        }
+
+        /* 图片标题悬浮层 (可选，如果想显示标题) */
+        .photo-info {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .photo-item:hover .photo-info {
+            opacity: 1;
+        }
     </style>
     <script src="./js/utils.js"></script>
 </head>
@@ -167,16 +220,12 @@
         <h1 class="hero-title">视觉一中——呼市一中学生的图片站</h1>
     </section>
 
-    <!-- 每周精选 (5个照片栏位) -->
     <section class="gallery-section" id="gallery">
         <h2 class="section-title">每周精选</h2>
-        <div class="photo-grid">
-            <!-- 5个照片占位符 -->
-            <div class="photo-item"><img src="https://video--online.oss-cn-beijing.aliyuncs.com/images/20260405/1775389968195_dji_mimo_20251101_072540_0_1762000048283_photo.jpg" alt="每周精选照片1"></div>
-            <div class="photo-item"><img src="https://video--online.oss-cn-beijing.aliyuncs.com/images/20260405/1775402769344_DJI_20251031174221_0162_D_A01.JPG" alt="每周精选照片1"></div>
-            <div class="photo-item"><img src="https://video--online.oss-cn-beijing.aliyuncs.com/images/20260405/1775407236312_DJI_20251111174233_0232_D_A01.JPG" alt="每周精选照片1"></div>
-            <div class="photo-item"><img src="https://video--online.oss-cn-beijing.aliyuncs.com/images/20260405/1775407325704_DJI_20251212101713_0443_D_A01.JPG" alt="每周精选照片1"></div>
-            <div class="photo-item"><img src="https://video--online.oss-cn-beijing.aliyuncs.com/images/20260405/1775402827264_DJI_20251126162239_0315_D_A01.JPG" alt="每周精选照片1"></div>
+        <!-- 添加 ID 以便 JS 操作 -->
+        <div class="photo-grid" id="weeklyPhotoGrid">
+            <!-- JS 将在这里动态插入图片 -->
+            <div class="photo-item">加载中...</div>
         </div>
     </section>
 
@@ -197,11 +246,84 @@
 </div>
     <script>
         // 关于按钮触发器逻辑
-        document.getElementById('about-trigger').addEventListener('click', function(e) {
+        document.getElementById('about-trigger').addEventListener('click', function (e) {
             e.preventDefault(); // 阻止默认链接跳转
             window.location.href = './about.html';
-            // 或者显示一个 modal
         });
+
+        async function loadWeeklyPhotos() {
+            const gridContainer = document.getElementById('weeklyPhotoGrid');
+            if (!gridContainer) return;
+
+            // OSS Bucket 地址
+            const indexJsonUrl = 'https://video--online.oss-cn-beijing.aliyuncs.com/images/index.json';
+
+            try {
+                const response = await fetch(indexJsonUrl);
+                if (!response.ok) {
+                    throw new Error('无法获取图片索引');
+                }
+
+                let photos = await response.json();
+
+                // 1. 过滤：只保留图片 (key 以 images/ 开头且不是 index.json)
+                photos = photos.filter(item => item.key && item.key.startsWith('images/'));
+
+                // 2. 【核心修改】排序：按 likes 降序排列 (点赞多的在前面)
+                // 如果点赞数相同，可以辅助按 updateTime 降序排列
+                photos.sort((a, b) => {
+                    const likesA = a.likes || 0;
+                    const likesB = b.likes || 0;
+
+                    if (likesB !== likesA) {
+                        return likesB - likesA; // 点赞数高的排前面
+                    }
+                    return (b.updateTime || 0) - (a.updateTime || 0); // 点赞相同时，新的排前面
+                });
+
+                // 3. 取前 5 张
+                const top5 = photos.slice(0, 5);
+
+                // 4. 清空容器
+                gridContainer.innerHTML = '';
+
+                if (top5.length === 0) {
+                    gridContainer.innerHTML = '<div class="photo-item">暂无图片</div>';
+                    return;
+                }
+
+                // 5. 渲染图片
+                top5.forEach(photo => {
+                    // 构建完整的图片 URL
+                    const imgUrl = `https://video--online.oss-cn-beijing.aliyuncs.com/${photo.key}`;
+                    const title = photo.title || '未命名';
+                    const author = photo.author || '匿名';
+                    const likes = photo.likes || 0;
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'photo-item';
+
+                    // 构建 HTML
+                    itemDiv.innerHTML = `
+                            <img src="${imgUrl}" alt="${title}" loading="lazy" onerror="this.src='./images/Logo.png'">
+                            <div class="photo-info">
+                                <div style="font-weight:bold;">${title}</div>
+                                <div style="font-size:0.8rem; opacity:0.8;">by ${author}</div>
+                            </div>
+                            <div class="like-badge">${likes}</div>
+                        `;
+
+                    gridContainer.appendChild(itemDiv);
+                });
+
+            } catch (error) {
+                console.error('加载每周精选失败:', error);
+                gridContainer.innerHTML = '<div class="photo-item">加载失败</div>';
+            }
+        }
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', loadWeeklyPhotos);
     </script>
 
 </body>
