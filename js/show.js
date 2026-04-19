@@ -78,7 +78,7 @@ function saveCachedMetadata(metaList) {
 // 【新增】通用自定义弹窗/提示函数
 // type: 'info' | 'success' | 'error' | 'loading'
 // duration: 自动关闭时间(ms), 0 表示不自动关闭
-function showCustomAlert(message, type = 'info', duration = 3000) {
+function showCustomAlert(message, type = 'info', duration = 2000) {
     let modal = document.getElementById('customAlertModal');
     if (!modal) {
         modal = document.createElement('div');
