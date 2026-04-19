@@ -9,23 +9,20 @@ const LOCAL_META_KEY = 'oss_gallery_metadata_v1';
 // 刷新限制变量
 let lastRefreshTime = 0;
 const REFRESH_LIMIT_INTERVAL = 20 * 1000; 
-let likeSyncQueue = {}; // 存储待同步的点赞增量: { 'images/xxx.jpg': 3, 'images/yyy.png': 1 }
+let likeSyncQueue = {}; 
 let syncTimer = null;
-const SYNC_DELAY = 5000; // 停止点赞 2 秒后同步
+const SYNC_DELAY = 5000; 
 
 // 1. 初始化 OSS Client
 async function initOSS() {
-    if (client) return true; // 如果当前页面实例中已经初始化，直接返回
+    if (client) return true; 
     
     try {
-        document.getElementById('statusMsg').innerText = '正在获取授权...';
+        showCustomAlert('正在获取授权...', 'info', 0); // 使用弹窗提示
         
-        // 使用统一的凭证获取函数
         const creds = await getStsCredentials();
-        
         const { accessKeyId, accessKeySecret, stsToken, region, bucket } = creds;
         
-        // 更新全局变量以便其他地方使用（如生成 URL）
         window.ossBucket = bucket; 
         window.ossRegion = region;
 
@@ -36,15 +33,9 @@ async function initOSS() {
             accessKeySecret: accessKeySecret,
             stsToken: stsToken,
             refreshSTSToken: async () => {
-                // 刷新时也应该走统一逻辑，但通常 refreshSTSToken 内部需要直接请求 API
-                // 这里为了简单，我们直接请求 API 刷新，不经过缓存，因为刷新意味着旧凭证必废
-                const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
                 const res = await fetch(STS_API_URL, { method: 'POST' });
                 const d = await res.json();
-                
-                // 刷新后更新缓存，保证其他标签页或后续操作拿到最新凭证
                 sessionStorage.setItem('oss_sts_credentials_v1', JSON.stringify(d));
-                
                 return {
                     accessKeyId: d.accessKeyId,
                     accessKeySecret: d.accessKeySecret,
@@ -54,21 +45,20 @@ async function initOSS() {
         });
         
         console.log('OSS 初始化成功');
+        hideCustomAlert(); // 隐藏加载提示
         return true;
     } catch (err) {
         console.error(err);
-        showStatus(`初始化失败: ${err.message}`, true);
+        showCustomAlert(`初始化失败: ${err.message}`, 'error');
         return false;
     }
 }
-
 
 function getCachedMetadata() {
     try {
         const cached = localStorage.getItem(LOCAL_META_KEY);
         if (cached) {
             const parsed = JSON.parse(cached);
-            console.log('使用本地缓存元数据', parsed.length, '条');
             return parsed;
         }
     } catch (e) {
@@ -85,20 +75,56 @@ function saveCachedMetadata(metaList) {
     }
 }
 
+// 【新增】通用自定义弹窗/提示函数
+// type: 'info' | 'success' | 'error' | 'loading'
+// duration: 自动关闭时间(ms), 0 表示不自动关闭
+function showCustomAlert(message, type = 'info', duration = 3000) {
+    let modal = document.getElementById('customAlertModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'customAlertModal';
+        modal.className = 'custom-alert-overlay';
+        document.body.appendChild(modal);
+    }
 
-// show.js
+    let icon = '';
+    if (type === 'success') icon = '✅ ';
+    if (type === 'error') icon = '❌ ';
+    if (type === 'loading') icon = '<div class="spinner-small"></div> ';
 
-// ... 前面的变量定义保持不变 ...
+    modal.innerHTML = `
+        <div class="custom-alert-box ${type}">
+            <div class="alert-content">${icon}${message}</div>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
 
-// 【修改】 loadImages 函数中的文件获取部分
+    // 清除之前的定时器
+    if (modal.timer) clearTimeout(modal.timer);
+
+    if (duration > 0) {
+        modal.timer = setTimeout(() => {
+            hideCustomAlert();
+        }, duration);
+    }
+}
+
+function hideCustomAlert() {
+    const modal = document.getElementById('customAlertModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ... loadImages 函数保持不变，但内部提示改为弹窗 ...
 async function loadImages() {
     const btn = document.getElementById('refreshBtn');
     
-    // 检查刷新频率 (保持不变)
     const now = Date.now();
     if (now - lastRefreshTime < REFRESH_LIMIT_INTERVAL) {
         const remainingSeconds = Math.ceil((REFRESH_LIMIT_INTERVAL - (now - lastRefreshTime)) / 1000);
-        showStatus(`⚠️ 刷新太频繁，请等待 ${remainingSeconds} 秒`, true);
+        showCustomAlert(`⚠️ 刷新太频繁，请等待 ${remainingSeconds} 秒`, 'error');
         return;
     }
     lastRefreshTime = now;
@@ -107,6 +133,8 @@ async function loadImages() {
     btn.disabled = true;
     btn.innerText = '加载中...';
     
+    // 初始化时已经显示了 loading 弹窗，这里不需要重复显示
+    
     const initialized = await initOSS();
     if (!initialized) {
         btn.disabled = false;
@@ -114,11 +142,9 @@ async function loadImages() {
         return;
     }
 
-    showStatus('正在加载数据...');
+    showCustomAlert('正在加载数据...', 'loading', 0);
 
     try {
-        // 【修改】 并行获取 images 和 videos 目录
-        // 注意：如果某个目录不存在，list 可能会报错或返回空，这里做简单容错
         let imageFiles = [];
         let videoFiles = [];
 
@@ -134,23 +160,20 @@ async function loadImages() {
             const vidResult = await client.list({ prefix: 'videos/', 'max-keys': 1000 });
             const vidObjects = vidResult.value ? vidResult.value.objects : vidResult.objects;
             if (vidObjects) {
-                // 过滤出 .m3u8 文件作为主入口，也可以包含 .ts 但通常只需展示 .m3u8
                 videoFiles = vidObjects.filter(obj => !obj.name.endsWith('/') && obj.name.toLowerCase().endsWith('.m3u8'));
             }
         } catch (e) { console.warn('获取视频列表失败', e); }
 
-        // 合并所有媒体文件
         const allMediaFiles = [...imageFiles, ...videoFiles];
 
         if (allMediaFiles.length === 0) {
-            showStatus('暂无媒体文件');
+            showCustomAlert('暂无媒体文件', 'info');
             btn.disabled = false;
             btn.innerText = '🔄 刷新列表';
             gallery.innerHTML = '';
             return;
         }
 
-        // 2. 尝试从本地缓存加载元数据 (保持不变)
         let localMetaList = getCachedMetadata();
         let metadataMap = {};
         
@@ -159,39 +182,31 @@ async function loadImages() {
                 metadataMap[item.key] = item;
             });
             renderGallery(allMediaFiles, metadataMap);
-            showStatus('已加载缓存，正在检查更新...');
+            showCustomAlert('已加载缓存，正在检查更新...', 'info', 1500);
         } else {
-            showStatus('正在获取元数据...');
+            showCustomAlert('正在获取元数据...', 'loading', 0);
         }
 
-        // 3. 同步远程元数据 (保持不变，但要注意 index.json 需要包含视频的元数据)
         try {
-            
             let remoteMetaList = [];
-
-            // 读取图片元数据
             try {
                 const metaImg = await client.get('images/index.json');
                 const contentImg = new TextDecoder("utf-8").decode(metaImg.content);
                 remoteMetaList = remoteMetaList.concat(JSON.parse(contentImg));
             } catch(e) { console.warn('无图片元数据'); }
 
-            // 读取视频元数据
             try {
                 const metaVid = await client.get('videos/index.json');
                 const contentVid = new TextDecoder("utf-8").decode(metaVid.content);
                 remoteMetaList = remoteMetaList.concat(JSON.parse(contentVid));
             } catch(e) { console.warn('无视频元数据'); }
 
-            // 确保 likes 字段
             remoteMetaList.forEach(item => {
                 if (item.likes === undefined) item.likes = 0;
             });
 
-            // 更新缓存 (合并保存)
             saveCachedMetadata(remoteMetaList);
             
-            // 更新 Map
             metadataMap = {};
             remoteMetaList.forEach(item => {
                 metadataMap[item.key] = item;
@@ -199,19 +214,17 @@ async function loadImages() {
 
             console.log('元数据已从 OSS 同步');
             renderGallery(allMediaFiles, metadataMap);
-            showStatus(''); 
+            showCustomAlert('加载完成', 'success'); 
 
         } catch (e) {
             console.warn('OSS 元数据同步完全失败', e);
             if (!localMetaList) {
-                showStatus('无法获取元数据，仅显示文件名');
+                showCustomAlert('无法获取元数据，仅显示文件名', 'error');
             }
         }
         
-        // 激活 zoom (只对图片生效)
         setTimeout(() => {
             if (typeof mediumZoom === 'function') {
-                // 只选择 img 标签，排除 video
                 mediumZoom('.gallery-grid img', {
                     background: 'rgba(0, 0, 0, 0.9)',
                     margin: 24,
@@ -222,16 +235,14 @@ async function loadImages() {
 
     } catch (err) {
         console.error(err);
-        showStatus(`加载失败: ${err.message}`, true);
+        showCustomAlert(`加载失败: ${err.message}`, 'error');
     } finally {
         btn.disabled = false;
         btn.innerText = '🔄 刷新列表';
     }
 }
 
-// 【重写】 renderGallery 函数，支持视频和图片混合渲染
 function openVideoInNewWindow(videoUrl, title) {
-    // 创建一个简单的 HTML 字符串，包含 hls.js 播放器
     const playerHtml = `
         <!DOCTYPE html>
         <html lang="zh-CN">
@@ -267,18 +278,15 @@ function openVideoInNewWindow(videoUrl, title) {
         </body>
         </html>
     `;
-
-    // 打开新窗口
     const win = window.open('', '_blank');
     if (win) {
         win.document.write(playerHtml);
-        win.document.close(); // 必须关闭文档流，否则浏览器会一直显示加载状态
+        win.document.close();
     } else {
-        alert('请允许弹出窗口以播放视频');
+        showCustomAlert('请允许弹出窗口以播放视频', 'error');
     }
 }
 
-// 【重写】 renderGallery 函数
 function renderGallery(files, metadataMap={}) {
     const gallery = document.getElementById('gallery');
     const fragment = document.createDocumentFragment();
@@ -286,9 +294,8 @@ function renderGallery(files, metadataMap={}) {
     files.forEach(file => {
         const card = document.createElement('div');
         card.className = 'image-card';
-        
-        // 添加指针样式，提示可点击
         card.style.cursor = 'pointer';
+        card.style.position = 'relative'; 
 
         const fileUrl = `https://${window.ossBucket}.${window.ossRegion}.aliyuncs.com/${file.name}`;
         const isVideo = file.name.toLowerCase().endsWith('.m3u8');
@@ -301,39 +308,39 @@ function renderGallery(files, metadataMap={}) {
         let mediaHtml = '';
         
         if (isVideo) {
-            // 【修改】视频不再渲染 video 标签，而是渲染一个带播放图标的封面
-            // 这里使用一个在线的通用播放图标，或者你可以本地放一个 play-icon.png
             const playIconUrl = 'https://img.icons8.com/ios-filled/100/ffffff/play.png'; 
-            
             mediaHtml = `
                 <div class="img-wrapper video-cover-wrapper" style="background-color: #000; display: flex; justify-content: center; align-items: center;">
-                    <!-- 这里可以用一张真实的截图作为背景图，如果有的话。如果没有，就用黑色背景+图标 -->
                     <img src="${playIconUrl}" style="width: 60px; height: 60px; opacity: 0.8; pointer-events: none;" alt="Play">
                     <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; padding:2px 6px; border-radius:4px; font-size:12px;">VIDEO</div>
                 </div>
             `;
-            
-            // 视频卡片点击事件：打开新窗口
             card.onclick = (e) => {
-                // 防止点击点赞按钮时触发卡片点击
-                if (e.target.closest('.like-btn')) return;
+                if (e.target.closest('.like-btn') || e.target.closest('.card-menu-btn')) return;
                 openVideoInNewWindow(fileUrl, title);
             };
-
         } else {
-            // 图片保持原样
             mediaHtml = `
                 <div class="img-wrapper">
                     <img src="${fileUrl}" alt="${title}" loading="lazy">
                 </div>
             `;
-            
-            // 图片卡片点击事件：原本由 medium-zoom 处理，不需要额外 onclick
-            // 但为了统一体验，如果希望点击图片也放大，medium-zoom 会自动处理 img 标签
         }
+
+        const menuHtml = `
+            <div class="card-menu-container">
+                <button class="card-menu-btn" onclick="toggleMenu(event, '${file.name}')">⋮</button>
+                <div id="menu-${file.name.replace(/[^a-zA-Z0-9]/g, '_')}" class="card-dropdown-menu">
+                    <div class="menu-item delete-item" onclick="promptDelete('${file.name}', '${meta.password || ''}')">
+                        🗑️ 删除
+                    </div>
+                </div>
+            </div>
+        `;
 
         card.innerHTML = `
             ${mediaHtml}
+            ${menuHtml}
             <div class="file-info">
                 <div class="file-name" style="font-weight: bold; font-size: 1rem; margin-bottom: 4px;" title="${title}">
                     ${isVideo ? '🎥 ' : '🖼️ '}${title}
@@ -352,58 +359,208 @@ function renderGallery(files, metadataMap={}) {
 
     gallery.innerHTML = ''; 
     gallery.appendChild(fragment);
-
 }
 
-// 【优化】处理点赞逻辑
+window.toggleMenu = function(event, fileName) {
+    event.stopPropagation(); 
+    const safeId = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+    const menu = document.getElementById(`menu-${safeId}`);
+    
+    document.querySelectorAll('.card-dropdown-menu').forEach(m => {
+        if (m.id !== `menu-${safeId}`) m.classList.remove('show');
+    });
+
+    if (menu) {
+        menu.classList.toggle('show');
+    }
+};
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.card-dropdown-menu').forEach(m => m.classList.remove('show'));
+});
+
+// 【修改】使用自定义确认弹窗替代 confirm
+function showConfirmDialog(message, onConfirm) {
+    const modal = document.createElement('div');
+    modal.className = 'custom-alert-overlay';
+    modal.innerHTML = `
+        <div class="custom-alert-box confirm-box">
+            <div class="alert-content">${message}</div>
+            <div class="confirm-actions">
+                <button class="btn-cancel">取消</button>
+                <button class="btn-confirm">确定</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    const btnCancel = modal.querySelector('.btn-cancel');
+    const btnConfirm = modal.querySelector('.btn-confirm');
+
+    const close = () => {
+        document.body.removeChild(modal);
+    };
+
+    btnCancel.onclick = close;
+    btnConfirm.onclick = () => {
+        close();
+        if (onConfirm) onConfirm();
+    };
+}
+
+window.promptDelete = async function(fileName, storedHashedPassword) {
+    document.querySelectorAll('.card-dropdown-menu').forEach(m => m.classList.remove('show'));
+
+    if (!storedHashedPassword) {
+        showConfirmDialog('该文件没有设置删除密码，确定要删除吗？', () => {
+            executeDelete(fileName);
+        });
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'delete-modal-overlay';
+    modal.innerHTML = `
+        <div class="delete-modal">
+            <h3>🔒 验证删除密码</h3>
+            <p>请输入上传时设置的密码以删除此文件</p>
+            <input type="password" id="deleteInputPwd" placeholder="请输入密码" />
+            <div class="delete-modal-actions">
+                <button class="btn-cancel" onclick="this.closest('.delete-modal-overlay').remove()">取消</button>
+                <button class="btn-confirm" id="btnConfirmDelete">确认删除</button>
+            </div>
+            <div id="deleteErrorMsg" style="color:red; font-size:0.8rem; margin-top:5px; display:none;"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    const input = modal.querySelector('#deleteInputPwd');
+    const confirmBtn = modal.querySelector('#btnConfirmDelete');
+    const errorMsg = modal.querySelector('#deleteErrorMsg');
+
+    input.focus();
+
+    const handleConfirm = async () => {
+        const userInput = input.value.trim();
+        if (!userInput) {
+            errorMsg.innerText = '密码不能为空';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = '验证中...';
+
+        try {
+            const inputHash = await hashString(userInput);
+            
+            if (inputHash === storedHashedPassword) {
+                modal.remove();
+                executeDelete(fileName);
+            } else {
+                errorMsg.innerText = '密码错误，请重试';
+                errorMsg.style.display = 'block';
+                input.value = '';
+                input.focus();
+            }
+        } catch (e) {
+            errorMsg.innerText = '验证出错: ' + e.message;
+            errorMsg.style.display = 'block';
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = '确认删除';
+        }
+    };
+
+    confirmBtn.onclick = handleConfirm;
+    
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') handleConfirm();
+    };
+};
+
+// 【修改】执行删除后强制刷新，绕过限制
+async function executeDelete(fileName) {
+    showCustomAlert('正在删除文件...', 'loading', 0);
+    try {
+        if (!client) await initOSS();
+        
+        await client.delete(fileName);
+        console.log(`Deleted OSS file: ${fileName}`);
+
+        let indexFile = fileName.startsWith('videos/') ? 'videos/index.json' : 'images/index.json';
+        
+        let metaList = [];
+        try {
+            const res = await client.get(indexFile);
+            const content = new TextDecoder("utf-8").decode(res.content);
+            metaList = JSON.parse(content);
+        } catch (e) {
+            console.warn('读取索引失败', e);
+        }
+
+        const newList = metaList.filter(item => item.key !== fileName);
+        
+        const blob = new Blob([JSON.stringify(newList, null, 2)], { type: 'application/json' });
+        await client.put(indexFile, blob);
+
+        let localMeta = getCachedMetadata() || [];
+        localMeta = localMeta.filter(item => item.key !== fileName);
+        saveCachedMetadata(localMeta);
+
+        showCustomAlert('✅ 删除成功', 'success');
+        
+        // 【关键修改】重置刷新计时器，并直接重新加载数据，不再受 20s 限制
+        lastRefreshTime = 0; 
+        
+        // 延迟一点让用户看到成功提示，然后刷新
+        setTimeout(() => {
+            loadImages();
+        }, 1000);
+
+    } catch (err) {
+        console.error(err);
+        showCustomAlert(`❌ 删除失败: ${err.message}`, 'error');
+    }
+}
+
 async function handleLike(fileName, btnElement) {
     const countSpan = btnElement.querySelector('.like-count');
     let currentLikes = parseInt(countSpan.innerText) || 0;
     
-    // 1. 乐观更新 UI
     countSpan.innerText = currentLikes + 1;
     
-    // 2. 更新本地缓存 (立即生效)
     let localMetaList = getCachedMetadata() || [];
     let targetItem = localMetaList.find(item => item.key === fileName);
     
     if (targetItem) {
         targetItem.likes = (targetItem.likes || 0) + 1;
     } else {
-        // 极端情况：本地没有记录，创建一条
         targetItem = { key: fileName, likes: 1, title: '', author: '' };
         localMetaList.push(targetItem);
     }
     saveCachedMetadata(localMetaList);
 
-    // 3. 加入同步队列
     if (!likeSyncQueue[fileName]) {
         likeSyncQueue[fileName] = 0;
     }
     likeSyncQueue[fileName]++;
 
-    // 4. 重置防抖定时器
     if (syncTimer) clearTimeout(syncTimer);
     
     syncTimer = setTimeout(async () => {
-        await flushLikeSync(); // 执行同步
+        await flushLikeSync(); 
     }, SYNC_DELAY);
 }
 
-// 【新增】批量同步点赞数据到 OSS
 async function flushLikeSync() {
-    // 如果队列为空，直接返回
     if (Object.keys(likeSyncQueue).length === 0) return;
-
-    console.log('开始批量同步点赞数据...', likeSyncQueue);
-
     try {
         if (!client) await initOSS();
-
-        // 1. 将队列中的文件按类型分组
         const imageLikes = {};
         const videoLikes = {};
-
         for (const [fileName, increment] of Object.entries(likeSyncQueue)) {
             if (fileName.toLowerCase().endsWith('.m3u8')) {
                 videoLikes[fileName] = increment;
@@ -411,33 +568,22 @@ async function flushLikeSync() {
                 imageLikes[fileName] = increment;
             }
         }
-
-        // 2. 处理图片点赞 (写入 images/index.json)
         if (Object.keys(imageLikes).length > 0) {
             await syncLikesToIndex('images/index.json', imageLikes);
         }
-
-        // 3. 处理视频点赞 (写入 videos/index.json)
         if (Object.keys(videoLikes).length > 0) {
             await syncLikesToIndex('videos/index.json', videoLikes);
         }
-
-        // 4. 全部成功后清空队列
         likeSyncQueue = {};
         console.log('所有点赞同步成功');
-
     } catch (err) {
         console.error('批量点赞同步失败:', err);
-        alert('点赞同步失败，数据已保存在本地，下次打开页面时会尝试重新同步');
-        // 注意：这里不清空 likeSyncQueue，以便下次重试
+        showCustomAlert('点赞同步失败，数据已保存在本地', 'error');
     }
 }
 
-// 【新增】辅助函数：同步特定类型的点赞到指定索引文件
 async function syncLikesToIndex(indexFilePath, likesMap) {
     let remoteMetaList = [];
-    
-    // 1. 读取现有的索引文件
     try {
         const result = await client.get(indexFilePath);
         const content = new TextDecoder("utf-8").decode(result.content);
@@ -447,22 +593,17 @@ async function syncLikesToIndex(indexFilePath, likesMap) {
         console.warn(`${indexFilePath} 不存在或解析失败，将创建新文件`, e);
         remoteMetaList = [];
     }
-
-    // 2. 应用增量
     let hasChanges = false;
     for (const [fileName, increment] of Object.entries(likesMap)) {
         const remoteIndex = remoteMetaList.findIndex(item => item.key === fileName);
-        
         if (remoteIndex !== -1) {
-            // 如果存在，累加
             remoteMetaList[remoteIndex].likes = (remoteMetaList[remoteIndex].likes || 0) + increment;
             hasChanges = true;
         } else {
-            // 如果不存在（可能是新上传但未刷新索引，或者元数据丢失），创建一条新记录
             console.warn(`在 ${indexFilePath} 中未找到 ${fileName}，创建新记录`);
             remoteMetaList.push({
                 key: fileName,
-                title: fileName.split('/').pop(), // 默认标题为文件名
+                title: fileName.split('/').pop(),
                 author: '未知作者',
                 likes: increment,
                 updateTime: Date.now()
@@ -470,8 +611,6 @@ async function syncLikesToIndex(indexFilePath, likesMap) {
             hasChanges = true;
         }
     }
-
-    // 3. 如果有变化，写回 OSS
     if (hasChanges) {
         const jsonStr = JSON.stringify(remoteMetaList, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -480,13 +619,7 @@ async function syncLikesToIndex(indexFilePath, likesMap) {
     }
 }
 
-function showStatus(msg, isError = false) {
-    const el = document.getElementById('statusMsg');
-    el.innerHTML = msg;
-    el.className = isError ? 'error-tip' : 'loading-tip';
-    if (!msg) el.style.display = 'none';
-    else el.style.display = 'block';
-}
+// 移除旧的 showStatus 函数，统一使用 showCustomAlert
 
 window.addEventListener('DOMContentLoaded', () => {
     loadImages();

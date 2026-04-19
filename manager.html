@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>资源索引管理 - Admin</title>
+    <title>资源索引管理 - 管理员</title>
     <style>
+        /* ... 原有样式保持不变 ... */
         :root {
             --primary-color: #007bff;
             --danger-color: #dc3545;
@@ -178,10 +179,24 @@
             font-family: monospace;
             font-size: 0.85rem;
             color: #6c757d;
-            max-width: 300px;
+            max-width: 200px;
+            /* 调小一点给密码留空间 */
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        /* 【新增】密码单元格样式 */
+        .password-cell {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #999;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+            /* 鼠标放上去显示完整内容 */
         }
 
         /* Status & Loading */
@@ -287,10 +302,12 @@
             <table id="dataTable">
                 <thead>
                     <tr>
-                        <th style="width: 35%;">文件路径 (Key)</th>
-                        <th style="width: 25%;">标题 (Title)</th>
-                        <th style="width: 15%;">作者 (Author)</th>
-                        <th style="width: 10%;">点赞 (Likes)</th>
+                        <th style="width: 25%;">文件路径 (Key)</th>
+                        <th style="width: 20%;">标题 (Title)</th>
+                        <th style="width: 10%;">作者 (Author)</th>
+                        <th style="width: 8%;">点赞 (Likes)</th>
+                        <!-- 【新增】密码列 -->
+                        <th style="width: 22%;">加密密码 (Hash/Base64)</th>
                         <th style="width: 15%;">操作</th>
                     </tr>
                 </thead>
@@ -393,7 +410,7 @@
             const data = currentType === 'images' ? imagesData : videosData;
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color:#999;">暂无数据</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 30px; color:#999;">暂无数据</td></tr>`;
                 return;
             }
 
@@ -430,7 +447,23 @@
                 inputLikes.onchange = (e) => { data[index].likes = parseInt(e.target.value) || 0; };
                 tdLikes.appendChild(inputLikes);
 
-                // 5. Actions
+                // 【新增】5. Password (只读显示，因为手动修改哈希值没有意义，除非你有生成器)
+                const tdPassword = document.createElement('td');
+                tdPassword.className = 'password-cell';
+                // 显示密码，如果没有则显示 '-'
+                const pwdDisplay = item.password ? item.password : '-';
+                tdPassword.textContent = pwdDisplay;
+                tdPassword.title = pwdDisplay; // 鼠标悬停显示完整哈希/编码
+                // 如果你希望允许手动修改（例如粘贴一个新的哈希值），可以改为 input：
+                /*
+                const inputPwd = document.createElement('input');
+                inputPwd.type = 'text';
+                inputPwd.value = item.password || '';
+                inputPwd.onchange = (e) => { data[index].password = e.target.value; };
+                tdPassword.appendChild(inputPwd);
+                */
+
+                // 6. Actions
                 const tdAction = document.createElement('td');
                 const btnDel = document.createElement('button');
                 btnDel.textContent = '移除';
@@ -441,7 +474,8 @@
                 btnDel.onclick = () => handleRemoveFromList(index, item.key);
                 tdAction.appendChild(btnDel);
 
-                tr.append(tdKey, tdTitle, tdAuthor, tdLikes, tdAction);
+                // 【注意】调整 append 顺序以匹配新的表头
+                tr.append(tdKey, tdTitle, tdAuthor, tdLikes, tdPassword, tdAction);
                 tbody.appendChild(tr);
             });
         }

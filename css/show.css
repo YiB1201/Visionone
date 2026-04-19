@@ -242,35 +242,7 @@ nav a:hover {
     transform: scale(0.95);
 }
 
-.loading-tip {
-    text-align: center;
-    color: #fff;
-    /* 在深色背景图上用白色文字，或者加文字阴影 */
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    margin-top: 50px;
-    font-size: 1.1rem;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 10px 20px;
-    border-radius: 20px;
-    display: inline-block;
-    margin-left: auto;
-    margin-right: auto;
-    display: block;
-    width: fit-content;
-}
 
-.error-tip {
-    text-align: center;
-    color: #fff;
-    background: rgba(231, 76, 60, 0.9);
-    margin-top: 20px;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    backdrop-filter: blur(5px);
-}
 
 /* 响应式调整 */
 @media (max-width: 768px) {
@@ -309,4 +281,347 @@ nav a:hover {
 .like-btn {
     z-index: 10; /* 确保在最上层 */
     position: relative;
+}
+
+/* --- 卡片右下角菜单样式 --- */
+.card-menu-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.card-menu-btn {
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.card-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.card-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 35px;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 100px;
+    overflow: hidden;
+    z-index: 20;
+}
+
+.card-dropdown-menu.show {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.menu-item {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.delete-item {
+    color: #dc3545;
+}
+
+.delete-item:hover {
+    background-color: #fff0f0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- 删除密码弹窗样式 --- */
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.delete-modal {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.delete-modal h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.delete-modal p {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.delete-modal input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+.delete-modal input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.delete-modal-actions button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #f1f1f1;
+    color: #333;
+}
+
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.btn-confirm {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #c82333;
+}
+
+.btn-confirm:disabled {
+    background: #eca2a9;
+    cursor: not-allowed;
+}
+/* --- 自定义全局弹窗样式 --- */
+.custom-alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    /* 默认隐藏 */
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.custom-alert-box {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    min-width: 250px;
+    max-width: 80%;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.alert-content {
+    font-size: 1rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* 状态颜色 */
+.custom-alert-box.success .alert-content {
+    color: #155724;
+}
+
+.custom-alert-box.error .alert-content {
+    color: #721c24;
+}
+
+.custom-alert-box.info .alert-content {
+    color: #0c5460;
+}
+
+/* 加载动画小 spinner */
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 确认框按钮样式 */
+.confirm-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.confirm-actions button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #f1f1f1;
+    color: #333;
+}
+
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.btn-confirm {
+    background: #007bff;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #0056b3;
+}
+
+/* 复用之前的删除密码弹窗样式，确保它也居中 */
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    /* 由 JS 控制 flex */
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.delete-modal {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 350px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: popIn 0.3s ease-out;
+}
+
+.delete-modal h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.delete-modal p {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.delete-modal input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.delete-modal-actions button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }

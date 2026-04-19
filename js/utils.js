@@ -8,7 +8,7 @@ async function getStsCredentials() {
     // 1. 尝试从 sessionStorage 获取
     try {
         const cached = sessionStorage.getItem(STORAGE_KEY);
-        if (cached) {
+        if (!cached) {
             const data = JSON.parse(cached);
             if (data.expiration && new Date(data.expiration) > new Date()) {
                 console.log('使用缓存的 STS 凭证');
@@ -38,4 +38,13 @@ async function getStsCredentials() {
         console.error('获取 STS 凭证失败:', err);
         throw err;
     }
+}
+
+async function hashString(message) {
+    if (!message) return '';
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
 }

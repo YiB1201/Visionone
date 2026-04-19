@@ -2,45 +2,67 @@ let client = null;
 let regionHost = null;
 let buckets = null;
 
-// 文件选择显示文件名
-const fileInput = document.getElementById('fileInput');
-const fileNameDisplay = document.getElementById('fileNameDisplay');
-const dropZone = document.getElementById('dropZone');
-const titleInput = document.getElementById('imageTitle');
-const authorInput = document.getElementById('authorName');
-
-// 【新增】弹窗相关变量
+// 【修改】将 DOM 元素获取放在一个初始化函数中，或者在使用前检查
+let fileInput, fileNameDisplay, dropZone, titleInput, authorInput, passwordInput;
 let autoRedirectTimer = null;
 let countdownInterval = null;
 
-fileInput.addEventListener('change', function () {
-    if (this.files && this.files[0]) {
-        fileNameDisplay.textContent = `已选择: ${this.files[0].name}`;
-        fileNameDisplay.style.display = 'block';
-    } else {
-        fileNameDisplay.style.display = 'none';
+// 【新增】初始化上传页面的 DOM 元素和事件
+function initUploadPage() {
+    // 只有在当前页面存在 fileInput 时才执行初始化，避免在 manager.html 或 shows.html 报错
+    fileInput = document.getElementById('fileInput');
+    if (!fileInput) return; 
+
+    fileNameDisplay = document.getElementById('fileNameDisplay');
+    dropZone = document.getElementById('dropZone');
+    titleInput = document.getElementById('imageTitle');
+    authorInput = document.getElementById('authorName');
+    passwordInput = document.getElementById('deletePassword');
+
+    fileInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+            fileNameDisplay.textContent = `已选择: ${this.files[0].name}`;
+            fileNameDisplay.style.display = 'block';
+        } else {
+            fileNameDisplay.style.display = 'none';
+        }
+    });
+
+    // 拖拽效果
+    if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                fileNameDisplay.textContent = `已选择: ${e.dataTransfer.files[0].name}`;
+                fileNameDisplay.style.display = 'block';
+            }
+        });
     }
-});
-
-// 拖拽效果
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-});
-
-dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
-});
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
-        fileNameDisplay.textContent = `已选择: ${e.dataTransfer.files[0].name}`;
-        fileNameDisplay.style.display = 'block';
+    
+    // 绑定错误弹窗关闭逻辑
+    const errorModal = document.getElementById('errorModal');
+    if (errorModal) {
+        errorModal.addEventListener('click', (e) => {
+            if (e.target === errorModal) {
+                closeErrorModal();
+            }
+        });
     }
-});
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', initUploadPage);
 
 //获取 STS 签名并初始化 OSS Client
 async function initOSSClient() {
@@ -91,7 +113,7 @@ async function initOSSClient() {
 // upload.js 中的修改建议
 
 // 修改函数签名，或者直接根据 objectKey 判断
-async function updateMetadataIndex(objectKey, title, author) {
+async function updateMetadataIndex(objectKey, title, author, password) {
     // 【修改】根据文件路径决定索引文件位置
     let indexFile = 'images/index.json';
     if (objectKey.startsWith('videos/')) {
@@ -111,16 +133,23 @@ async function updateMetadataIndex(objectKey, title, author) {
     }
 
     const existingIndex = metadataList.findIndex(item => item.key === objectKey);
+    
+    // 【修改】将 password 加入 newItem
     const newItem = { 
         key: objectKey, 
         title: title, 
         author: author, 
+        password: password, // 存储密码（注意：生产环境建议后端加密存储，前端直接存明文有风险，但作为简单Demo可行）
         likes: 0, 
         updateTime: Date.now() 
     };
     
     if (existingIndex >= 0) {
         newItem.likes = metadataList[existingIndex].likes || 0;
+        // 如果更新时没传密码，保留旧密码？或者强制更新？这里假设每次上传都重置或更新
+        if (!password) {
+            newItem.password = metadataList[existingIndex].password;
+        }
         metadataList[existingIndex] = newItem;
     } else {
         metadataList.push(newItem);
@@ -161,7 +190,6 @@ function showSuccessModal() {
         goToGallery();
     }, 5000);
 }
-
 // 【新增】继续上传
 function stayAndUpload() {
     const modal = document.getElementById('successModal');
@@ -175,6 +203,7 @@ function stayAndUpload() {
     fileInput.value = '';
     titleInput.value = '';
     authorInput.value = '';
+    passwordInput.value = ''; // 【新增】清空密码
     fileNameDisplay.style.display = 'none';
     document.getElementById('result').innerHTML = '';
 }
@@ -184,25 +213,76 @@ function goToGallery() {
     window.location.href = './shows.html';
 }
 
+function showErrorModal(message, title = '提示') {
+    const modal = document.getElementById('errorModal');
+    const titleEl = document.getElementById('errorModalTitle');
+    const msgEl = document.getElementById('errorModalMessage');
+    
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
+    
+    modal.style.display = 'flex';
+}
+
+// 【新增】关闭错误弹窗
+function closeErrorModal() {
+    const modal = document.getElementById('errorModal');
+    modal.style.display = 'none';
+}
+
+// 【新增】点击遮罩层也可以关闭错误弹窗
+document.addEventListener('DOMContentLoaded', () => {
+    const errorModal = document.getElementById('errorModal');
+    if (errorModal) {
+        errorModal.addEventListener('click', (e) => {
+            if (e.target === errorModal) {
+                closeErrorModal();
+            }
+        });
+    }
+});
+
+async function hashString(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
+
 async function handleUpload() {
     const file = fileInput.files[0];
     
-    // 【新增】1. 检查是否选择了文件
+    // 【修改】1. 检查是否选择了文件 - 替换 alert
     if (!file) {
-        alert('请先选择文件');
+        showErrorModal('请先选择要上传的文件', '未选择文件');
         return;
     }
 
-    // 【新增】2. 限制文件大小为 100MB (100 * 1024 * 1024 bytes)
+    // 【修改】2. 检查密码必填项 - 替换 alert
+    const deletePwd = passwordInput.value.trim();
+    let hashedPassword = '';
+    if (!deletePwd) {
+        showErrorModal('请填写删除密码，这是后续删除文件的唯一凭证！', '缺少必要信息');
+        passwordInput.focus();
+        return;
+    }
+    else if (deletePwd) {
+        hashedPassword = await hashString(deletePwd);
+    }
+
+    // 【原有】3. 限制文件大小... - 替换 alert
     const MAX_SIZE = 100 * 1024 * 1024; 
     if (file.size > MAX_SIZE) {
-        alert(`文件大小超过限制！\n当前大小: ${(file.size / 1024 / 1024).toFixed(2)} MB\n最大允许: 100 MB`);
+        showErrorModal(`文件大小超过限制！\n当前大小: ${(file.size / 1024 / 1024).toFixed(2)} MB\n最大允许: 100 MB`, '文件过大');
         return;
     }
     
+    // ... 后续代码保持不变 ...
     const customTitle = titleInput.value.trim() || file.name;
     const author = authorInput.value.trim() || '匿名';
 
+    // ... 原有 UI 状态设置代码 ...
     const uploadBtn = document.getElementById('uploadBtn');
     const resultDiv = document.getElementById('result');
     const progressContainer = document.getElementById('progressContainer');
@@ -225,7 +305,9 @@ async function handleUpload() {
         const isImage = file.type.startsWith('image/');
 
         if (!isVideo && !isImage) {
-            throw new Error('不支持的文件类型，仅支持视频或图片');
+            // 【修改】替换 alert
+            showErrorModal('不支持的文件类型，仅支持视频或图片', '类型错误');
+            throw new Error('不支持的文件类型');
         }
 
         let objectKey = '';
@@ -233,9 +315,6 @@ async function handleUpload() {
 
         if (isVideo) {
             progressText.innerText = '正在上传视频...';
-            // 注意：这里保留你原有的逻辑，但建议确认 uploadVideoWithFolder 返回的路径是否正确
-            // 原有代码中 return `videos/${file.name}` 可能会导致不同日期的同名文件冲突或路径错误
-            // 建议改为返回实际的 storeAs 路径，见下方补充建议
             const videoPath = await uploadVideoWithFolder(file);
             objectKey = videoPath;
             metaKey = videoPath.replace(/\.[^/.]+$/, ".m3u8"); 
@@ -248,16 +327,20 @@ async function handleUpload() {
         }
 
         progressText.innerText = '正在保存信息...';
-        
-        await updateMetadataIndex(metaKey, customTitle, author);
+
+        // 【注意】这里你之前的代码传了 deletePwd，但函数定义只有3个参数，记得去 updateMetadataIndex 加上密码逻辑，或者在这里处理
+        // 假设你已经在 updateMetadataIndex 中处理了密码，或者你需要修改该函数签名
+        await updateMetadataIndex(metaKey, customTitle, author, hashedPassword);
 
         const fullUrl = `https://${buckets}.${regionHost}/${objectKey}`;
 
         progressBar.style.width = '100%';
         progressText.innerText = '上传完成！';
         
+        // 【新增】清空密码框
         titleInput.value = '';
         authorInput.value = '';
+        passwordInput.value = ''; // 清空密码
 
         if (file.type.startsWith('image/')) {
             resultDiv.innerHTML = `
@@ -278,6 +361,12 @@ async function handleUpload() {
 
     } catch (err) {
         console.error(err);
+        // 【修改】捕获错误时也使用自定义弹窗，而不是只展示在 resultDiv
+        // 如果是因为用户主动取消或非网络错误，可以弹窗提示
+        if (err.message !== '不支持的文件类型') {
+             showErrorModal(`上传过程中发生错误: ${err.message}`, '上传失败');
+        }
+        
         resultDiv.innerHTML = `
             <div class="result-box" style="border-left: 4px solid #e74c3c;">
                 <div class="status-error">❌ 上传失败</div>

@@ -9,7 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
     <link rel="stylesheet" href="./css/show.css">
     <link rel="icon" href="./images/Logo.png" type="image/png">
-    <script src="./js/utils.js"></script>
+    <script src="./js/utils.js"></script> <!-- 1. 基础 STS -->
+    <script src="./js/ossManager.js"></script> <!-- 2. 核心管理器 (依赖 utils) -->
+    <script src="./js/show.js"></script> <!-- 3. 业务逻辑 (依赖 manager) -->
 </head>
 
 <body>
@@ -41,8 +43,6 @@
         </div>
 
         <div id="gallery" class="gallery-grid"></div>
-
-        <div id="statusMsg" class="loading-tip">正在初始化...</div>
     </div>
 
     <!-- 引入外部 JS -->

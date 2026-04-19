@@ -9,7 +9,9 @@
     <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.1.min.js"></script>
     <link rel="stylesheet" href="./css/upload.css">
     <link rel="icon" href="./images/Logo.png" type="image/png">
-    <script src="./js/utils.js"></script>
+    <script src="./js/utils.js"></script> <!-- 1. 基础 STS -->
+    <script src="./js/ossManager.js"></script> <!-- 2. 核心管理器 (依赖 utils) -->
+    <script src="./js/upload.js"></script> <!-- 3. 业务逻辑 (依赖 manager) -->
 </head>
 
 <body>
@@ -45,6 +47,10 @@
                 <div style="margin-bottom: 15px;">
                     <label for="imageTitle" class="meta-label">图片标题</label>
                     <input type="text" id="imageTitle" class="meta-input" placeholder="请输入图片标题，不填则为文件名">
+                    <div style="margin-bottom: 15px;">
+                        <label for="deletePassword" class="meta-label">删除密码 <span style="color:red">*</span></label>
+                        <input type="password" id="deletePassword" class="meta-input" placeholder="请设置删除密码，遗忘将无法删除" required>
+                    </div>
                 </div>
                 <div>
                     <label for="authorName" class="meta-label">作者昵称</label>
@@ -65,7 +71,10 @@
     </div>
 
     <!-- 自定义弹窗 HTML -->
-    <div id="successModal" class="custom-modal-overlay">
+    <!-- ... 其他代码 ... -->
+
+    <!-- 【修改】确保默认隐藏 -->
+    <div id="successModal" class="custom-modal-overlay" style="display: none;">
         <div class="custom-modal">
             <div class="modal-title">✅ 上传成功！</div>
             <div class="modal-countdown">
@@ -77,6 +86,22 @@
             </div>
         </div>
     </div>
+
+    <!-- 错误弹窗也确保默认隐藏 -->
+    <div id="errorModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal error-modal">
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title" id="errorModalTitle">提示</div>
+            <div class="modal-message" id="errorModalMessage">内容</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-primary" onclick="closeErrorModal()">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/upload.js"></script>
+</body>
+</html>
 
     <script src="./js/upload.js"></script>
 </body>
