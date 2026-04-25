@@ -10,7 +10,7 @@ let countdownInterval = null;
 // 【新增】初始化上传页面的 DOM 元素和事件
 function initUploadPage() {
     // 只有在当前页面存在 fileInput 时才执行初始化，避免在 manager.html 或 shows.html 报错
-    fileInput = document.getElementById('fileInput');
+fileInput = document.getElementById('fileInput');
     if (!fileInput) return; 
 
     fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -19,9 +19,15 @@ function initUploadPage() {
     authorInput = document.getElementById('authorName');
     passwordInput = document.getElementById('deletePassword');
 
+    // 【修改】监听 change 事件，显示文件数量
     fileInput.addEventListener('change', function () {
-        if (this.files && this.files[0]) {
-            fileNameDisplay.textContent = `已选择: ${this.files[0].name}`;
+        const count = this.files.length;
+        if (count > 0) {
+            if (count === 1) {
+                fileNameDisplay.textContent = `已选择: ${this.files[0].name}`;
+            } else {
+                fileNameDisplay.textContent = `已选择 ${count} 张图片`;
+            }
             fileNameDisplay.style.display = 'block';
         } else {
             fileNameDisplay.style.display = 'none';
@@ -29,7 +35,7 @@ function initUploadPage() {
     });
 
     // 拖拽效果
-    if (dropZone) {
+if (dropZone) {
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -44,7 +50,8 @@ function initUploadPage() {
             dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length) {
                 fileInput.files = e.dataTransfer.files;
-                fileNameDisplay.textContent = `已选择: ${e.dataTransfer.files[0].name}`;
+                const count = e.dataTransfer.files.length;
+                fileNameDisplay.textContent = count === 1 ? `已选择: ${e.dataTransfer.files[0].name}` : `已选择 ${count} 张图片`;
                 fileNameDisplay.style.display = 'block';
             }
         });
@@ -115,10 +122,7 @@ async function initOSSClient() {
 // 修改函数签名，或者直接根据 objectKey 判断
 async function updateMetadataIndex(objectKey, title, author, password) {
     // 【修改】根据文件路径决定索引文件位置
-    let indexFile = 'images/index.json';
-    if (objectKey.startsWith('videos/')) {
-        indexFile = 'videos/index.json';
-    }
+    const indexFile = 'images/index.json';
 
     let metadataList = [];
     
@@ -134,19 +138,17 @@ async function updateMetadataIndex(objectKey, title, author, password) {
 
     const existingIndex = metadataList.findIndex(item => item.key === objectKey);
     
-    // 【修改】将 password 加入 newItem
     const newItem = { 
         key: objectKey, 
         title: title, 
         author: author, 
-        password: password, // 存储密码（注意：生产环境建议后端加密存储，前端直接存明文有风险，但作为简单Demo可行）
+        password: password, 
         likes: 0, 
         updateTime: Date.now() 
     };
     
     if (existingIndex >= 0) {
         newItem.likes = metadataList[existingIndex].likes || 0;
-        // 如果更新时没传密码，保留旧密码？或者强制更新？这里假设每次上传都重置或更新
         if (!password) {
             newItem.password = metadataList[existingIndex].password;
         }
@@ -205,7 +207,7 @@ function stayAndUpload() {
     authorInput.value = '';
     passwordInput.value = ''; // 【新增】清空密码
     fileNameDisplay.style.display = 'none';
-    document.getElementById('result').innerHTML = '';
+    // document.getElementById('result').innerHTML = '';
 }
 
 // 【新增】前往画廊
@@ -251,38 +253,66 @@ async function hashString(message) {
 }
 
 async function handleUpload() {
-    const file = fileInput.files[0];
+     const files = Array.from(fileInput.files); // 转换为数组以便操作
     
-    // 【修改】1. 检查是否选择了文件 - 替换 alert
-    if (!file) {
+    if (files.length === 0) {
         showErrorModal('请先选择要上传的文件', '未选择文件');
         return;
     }
 
-    // 【修改】2. 检查密码必填项 - 替换 alert
+    // 【修复】在函数最开始就锁定元数据，防止任何潜在的 DOM 变化影响
+    const baseTitle = titleInput.value.trim();
+    if (!baseTitle) {
+        showErrorModal('请填写图片标题，这是必填项！', '缺少必要信息');
+        titleInput.focus();
+        return;
+    }
+
     const deletePwd = passwordInput.value.trim();
-    let hashedPassword = '';
     if (!deletePwd) {
         showErrorModal('请填写删除密码，这是后续删除文件的唯一凭证！', '缺少必要信息');
         passwordInput.focus();
         return;
     }
-    else if (deletePwd) {
+    
+    // 预先计算哈希，只算一次
+    let hashedPassword = '';
+    try {
         hashedPassword = await hashString(deletePwd);
-    }
-
-    // 【原有】3. 限制文件大小... - 替换 alert
-    const MAX_SIZE = 100 * 1024 * 1024; 
-    if (file.size > MAX_SIZE) {
-        showErrorModal(`文件大小超过限制！\n当前大小: ${(file.size / 1024 / 1024).toFixed(2)} MB\n最大允许: 100 MB`, '文件过大');
+    } catch (e) {
+        showErrorModal('密码加密失败，请重试', '错误');
         return;
     }
-    
-    // ... 后续代码保持不变 ...
-    const customTitle = titleInput.value.trim() || file.name;
-    const author = authorInput.value.trim() || '匿名';
 
-    // ... 原有 UI 状态设置代码 ...
+    const globalAuthor = authorInput.value.trim() || '匿名';
+    const isBatch = files.length > 1; 
+
+    // 2. 预检查：文件大小和类型
+    const MAX_SIZE = 100 * 1024 * 1024; 
+    const invalidFiles = [];
+    
+    files.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+            invalidFiles.push(`${file.name} (非图片)`);
+        } else if (file.size > MAX_SIZE) {
+            invalidFiles.push(`${file.name} (超过100MB)`);
+        }
+    });
+
+    if (invalidFiles.length > 0) {
+        showErrorModal(`以下文件不符合要求，已跳过：\n${invalidFiles.join('\n')}`, '部分文件无效');
+    }
+
+    const validFiles = files.filter(file => 
+        file.type.startsWith('image/') && file.size <= MAX_SIZE
+    );
+
+    if (validFiles.length === 0) {
+        showErrorModal('没有符合要求的图片可上传', '上传失败');
+        return;
+    }
+
+    // UI 状态设置
     const uploadBtn = document.getElementById('uploadBtn');
     const resultDiv = document.getElementById('result');
     const progressContainer = document.getElementById('progressContainer');
@@ -290,95 +320,157 @@ async function handleUpload() {
     const progressText = document.getElementById('progressText');
 
     uploadBtn.disabled = true;
-    uploadBtn.innerText = '上传中...';
-    resultDiv.innerHTML = '';
+    uploadBtn.innerText = `上传中 (0/${validFiles.length})`;
+    resultDiv.innerHTML = '<div style="margin-top:10px; font-size:0.9rem; color:#666;">正在处理队列...</div>';
     progressContainer.style.display = 'block';
     progressBar.style.width = '0%';
-    progressText.innerText = '正在初始化...';
+    progressText.innerText = '初始化批量上传...';
+
+    let successCount = 0;
+    let failCount = 0;
+    const total = validFiles.length;
+    
+    // 【修复】存储完整的元数据，而不仅仅是 key
+    const uploadResults = []; 
 
     try {
         if (!client) {
             await initOSSClient();
         }
 
-        const isVideo = file.type.startsWith('video/');
-        const isImage = file.type.startsWith('image/');
-
-        if (!isVideo && !isImage) {
-            // 【修改】替换 alert
-            showErrorModal('不支持的文件类型，仅支持视频或图片', '类型错误');
-            throw new Error('不支持的文件类型');
-        }
-
-        let objectKey = '';
-        let metaKey = ''; 
-
-        if (isVideo) {
-            progressText.innerText = '正在上传视频...';
-            const videoPath = await uploadVideoWithFolder(file);
-            objectKey = videoPath;
-            metaKey = videoPath.replace(/\.[^/.]+$/, ".m3u8"); 
-            console.log(`m3u8 Key: ${metaKey}`);
+        // 【并发控制】同时上传的数量，建议 3-5 个
+        const CONCURRENCY = 3;
+        
+        // 执行队列
+        for (let i = 0; i < total; i += CONCURRENCY) {
+            const batch = validFiles.slice(i, i + CONCURRENCY);
             
-        } else if (isImage) {
-            progressText.innerText = '正在上传图片...';
-            objectKey = await uploadImage(file);
-            metaKey = objectKey; 
+            // 【修复】在 map 之前确定这批文件的标题，避免闭包问题（虽然 let/const 块级作用域通常没问题，但显式传递更安全）
+            const batchPromises = batch.map(async (file, indexInBatch) => {
+                try {
+                    progressText.innerText = `正在上传: ${file.name}`;
+                    
+                    // 生成标题
+                    const globalIndex = i + indexInBatch + 1; 
+                    const finalTitle = isBatch ? `${baseTitle}-${globalIndex}` : baseTitle;
+                    
+                    // 上传文件
+                    const objectKey = await uploadImage(file);
+                    
+                    // 【关键】记录完整的结果，包括标题和密码
+                    uploadResults.push({
+                        objectKey: objectKey,
+                        title: finalTitle,
+                        author: globalAuthor,
+                        password: hashedPassword,
+                        fileName: file.name
+                    });
+                    
+                    successCount++;
+                    return { status: 'success', name: file.name };
+                } catch (err) {
+                    console.error(`Upload failed for ${file.name}:`, err);
+                    failCount++;
+                    return { status: 'fail', name: file.name, error: err.message };
+                }
+            });
+
+            // 等待当前批次完成
+            const results = await Promise.all(batchPromises);
+            
+            // 更新进度条
+            const currentProgress = Math.floor(((i + batch.length) / total) * 100);
+            progressBar.style.width = `${currentProgress}%`;
+            uploadBtn.innerText = `上传中 (${successCount + failCount}/${total})`;
+            
+            // 实时更新结果列表
+            results.forEach(res => {
+                const div = document.createElement('div');
+                div.style.fontSize = '0.85rem';
+                div.style.padding = '2px 0';
+                if (res.status === 'success') {
+                    div.style.color = 'green';
+                    div.innerText = `✅ ${res.name}上传成功`;
+                } else {
+                    div.style.color = 'red';
+                    div.innerText = `❌ ${res.name}上传失败: ${res.error}`;
+                }
+                resultDiv.innerHTML = div.outerHTML;
+            });
         }
 
-        progressText.innerText = '正在保存信息...';
+        // 【关键修复】所有文件上传完成后，【一次性】批量更新元数据索引
+        if (uploadResults.length > 0) {
+            progressText.innerText = '正在同步元数据...';
+            
+            // 1. 获取当前远程索引
+            let metadataList = [];
+            try {
+                const result = await client.get('images/index.json');
+                const content = new TextDecoder("utf-8").decode(result.content);
+                metadataList = JSON.parse(content);
+                if (!Array.isArray(metadataList)) metadataList = [];
+            } catch (e) {
+                console.warn('远程索引不存在，将创建新索引', e);
+                metadataList = [];
+            }
 
-        // 【注意】这里你之前的代码传了 deletePwd，但函数定义只有3个参数，记得去 updateMetadataIndex 加上密码逻辑，或者在这里处理
-        // 假设你已经在 updateMetadataIndex 中处理了密码，或者你需要修改该函数签名
-        await updateMetadataIndex(metaKey, customTitle, author, hashedPassword);
+            // 2. 在内存中合并新数据
+            uploadResults.forEach(item => {
+                // 检查是否已存在（理论上批量上传新文件不应存在，但为了健壮性）
+                const existingIndex = metadataList.findIndex(m => m.key === item.objectKey);
+                
+                const newItem = { 
+                    key: item.objectKey, 
+                    title: item.title,      // 确保标题不为空
+                    author: item.author, 
+                    password: item.password, // 确保密码不为空
+                    likes: 0, 
+                    updateTime: Date.now() 
+                };
+                
+                if (existingIndex >= 0) {
+                    // 如果存在，保留原有的点赞数，但更新标题和密码（因为是新上传覆盖）
+                    newItem.likes = metadataList[existingIndex].likes || 0;
+                    metadataList[existingIndex] = newItem;
+                } else {
+                    metadataList.push(newItem);
+                }
+            });
 
-        const fullUrl = `https://${buckets}.${regionHost}/${objectKey}`;
+            // 3. 一次性写入远程
+            const jsonStr = JSON.stringify(metadataList, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            await client.put('images/index.json', blob);
+            console.log('元数据索引批量更新成功');
+        }
 
         progressBar.style.width = '100%';
-        progressText.innerText = '上传完成！';
+        progressText.innerText = `全部完成！成功: ${successCount}, 失败: ${failCount}`;
+        uploadBtn.innerText = '上传完成';
         
-        // 【新增】清空密码框
+        // 清空输入
         titleInput.value = '';
         authorInput.value = '';
-        passwordInput.value = ''; // 清空密码
+        passwordInput.value = '';
+        fileInput.value = ''; 
+        fileNameDisplay.style.display = 'none';
 
-        if (file.type.startsWith('image/')) {
-            resultDiv.innerHTML = `
-                <div class="result-box">
-                    <div class="status-success">✅ 图片上传成功</div>
-                    <img src="${fullUrl}" alt="${customTitle}" style="max-height: 100px;">
-                </div>
-            `;
+        if (failCount === 0) {
+            showSuccessModal();
         } else {
-             resultDiv.innerHTML = `
-                <div class="result-box">
-                    <div class="status-success">✅ 视频上传成功 (请确保已转码为 m3u8)</div>
-                </div>
-            `;
+            showErrorModal(`上传结束：成功: ${successCount}, 失败: ${failCount}`, '部分成功');
         }
-
-        showSuccessModal();
 
     } catch (err) {
         console.error(err);
-        // 【修改】捕获错误时也使用自定义弹窗，而不是只展示在 resultDiv
-        // 如果是因为用户主动取消或非网络错误，可以弹窗提示
-        if (err.message !== '不支持的文件类型') {
-             showErrorModal(`上传过程中发生错误: ${err.message}`, '上传失败');
-        }
-        
-        resultDiv.innerHTML = `
-            <div class="result-box" style="border-left: 4px solid #e74c3c;">
-                <div class="status-error">❌ 上传失败</div>
-                <p style="font-size: 0.9rem; color: #666;">${err.message}</p>
-            </div>
-        `;
+        showErrorModal(`批量上传发生严重错误: ${err.message}`, '系统错误');
     } finally {
         uploadBtn.disabled = false;
-        uploadBtn.innerText = '开始上传';
+        uploadBtn.innerText = '开始批量上传';
         setTimeout(() => {
             progressContainer.style.display = 'none';
-        }, 1000);
+        }, 2000);
     }
 }
 
@@ -390,26 +482,4 @@ async function uploadImage(file) {
     console.log('开始上传图片:', storeAs);
     await client.put(storeAs, file);
     return storeAs;
-}
-
-async function uploadVideoWithFolder(file) {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const uniqueId = Date.now() + '_' + file.name;
-    const folderName = `videos/${dateStr}/${uniqueId}/`;
-    const storeAs = `${folderName}${file.name}`;
-    console.log('开始分片上传视频:', storeAs);
-    
-    await client.multipartUpload(storeAs, file, {
-        progress: function (p, checkpoint) {
-            const percent = Math.floor(p * 100) + '%';
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            if (progressBar) progressBar.style.width = percent;
-            if (progressText) progressText.innerText = `上传中... ${percent}`;
-        },
-        parallel: 4,
-        partSize: 1024 * 1024 * 5
-    });
-
-    return `videos/${file.name}`;
 }

@@ -12,14 +12,22 @@ let lastRefreshTime = 0;
 const REFRESH_LIMIT_INTERVAL = 20 * 1000; 
 let likeSyncQueue = {}; 
 let syncTimer = null;
-const SYNC_DELAY = 5000; 
+const SYNC_DELAY = 3500; 
+
+// 【新增】懒加载/无限滚动相关变量
+let allMediaFiles = []; // 存储所有图片文件列表
+let currentMetadataMap = {}; // 存储元数据映射
+let loadedCount = 0; // 当前已渲染的数量
+const PAGE_SIZE = 11; // 每次加载的图片数量
+let isLoadingMore = false; // 防止重复加载
+let isAllLoaded = false; // 是否全部加载完毕
 
 // 1. 初始化 OSS Client
 async function initOSS() {
     if (client) return true; 
     
     try {
-        showCustomAlert('正在获取授权...', 'info', 0); // 使用弹窗提示
+        showCustomAlert('正在获取授权...', 'info', 0); 
         
         const creds = await getStsCredentials();
         const { accessKeyId, accessKeySecret, stsToken, region, bucket } = creds;
@@ -46,7 +54,7 @@ async function initOSS() {
         });
         
         console.log('OSS 初始化成功');
-        hideCustomAlert(); // 隐藏加载提示
+        hideCustomAlert(); 
         return true;
     } catch (err) {
         console.error(err);
@@ -112,8 +120,6 @@ function saveCachedMetadata(metaList) {
 }
 
 // 【新增】通用自定义弹窗/提示函数
-// type: 'info' | 'success' | 'error' | 'loading'
-// duration: 自动关闭时间(ms), 0 表示不自动关闭
 function showCustomAlert(message, type = 'info', duration = 2000) {
     let modal = document.getElementById('customAlertModal');
     if (!modal) {
@@ -136,7 +142,6 @@ function showCustomAlert(message, type = 'info', duration = 2000) {
     
     modal.style.display = 'flex';
 
-    // 清除之前的定时器
     if (modal.timer) clearTimeout(modal.timer);
 
     if (duration > 0) {
@@ -153,7 +158,7 @@ function hideCustomAlert() {
     }
 }
 
-// ... loadImages 函数保持不变，但内部提示改为弹窗 ...
+// 【核心修改】loadImages：获取数据并初始化懒加载状态
 async function loadImages() {
     const btn = document.getElementById('refreshBtn');
     
@@ -168,8 +173,15 @@ async function loadImages() {
     const gallery = document.getElementById('gallery');
     btn.disabled = true;
     btn.innerText = '加载中...';
-    
-    // 初始化时已经显示了 loading 弹窗，这里不需要重复显示
+
+    // 【重置懒加载状态】
+    allMediaFiles = [];
+    currentMetadataMap = {};
+    loadedCount = 0;
+    isAllLoaded = false;
+    isLoadingMore = false;
+    gallery.innerHTML = ''; // 清空现有画廊
+    window.removeEventListener('scroll', handleScroll);
     
     const initialized = await initOSS();
     if (!initialized) {
@@ -181,9 +193,8 @@ async function loadImages() {
     showCustomAlert('正在加载数据...', 'loading', 0);
 
     try {
+        // 【仅获取图片列表】
         let imageFiles = [];
-        let videoFiles = [];
-
         try {
             const imgResult = await client.list({ prefix: 'images/', 'max-keys': 1000 });
             const imgObjects = imgResult.value ? imgResult.value.objects : imgResult.objects;
@@ -192,37 +203,19 @@ async function loadImages() {
             }
         } catch (e) { console.warn('获取图片列表失败', e); }
 
-        try {
-            const vidResult = await client.list({ prefix: 'videos/', 'max-keys': 1000 });
-            const vidObjects = vidResult.value ? vidResult.value.objects : vidResult.objects;
-            if (vidObjects) {
-                videoFiles = vidObjects.filter(obj => !obj.name.endsWith('/') && obj.name.toLowerCase().endsWith('.m3u8'));
-            }
-        } catch (e) { console.warn('获取视频列表失败', e); }
-
-        const allMediaFiles = [...imageFiles, ...videoFiles];
+        allMediaFiles = imageFiles; // 存入全局变量
 
         if (allMediaFiles.length === 0) {
             showCustomAlert('暂无媒体文件', 'info');
             btn.disabled = false;
             btn.innerText = '🔄 刷新列表';
-            gallery.innerHTML = '';
             return;
         }
 
+        // 获取元数据
         let localMetaList = getCachedMetadata();
-        let metadataMap = {};
         
-        if (localMetaList) {
-            localMetaList.forEach(item => {
-                metadataMap[item.key] = item;
-            });
-            renderGallery(allMediaFiles, metadataMap);
-            showCustomAlert('已加载缓存，正在检查更新...', 'info', 1500);
-        } else {
-            showCustomAlert('正在获取元数据...', 'loading', 0);
-        }
-
+        // 尝试从远程同步元数据
         try {
             let remoteMetaList = [];
             try {
@@ -231,48 +224,32 @@ async function loadImages() {
                 remoteMetaList = remoteMetaList.concat(JSON.parse(contentImg));
             } catch(e) { console.warn('无图片元数据'); }
 
-            try {
-                const metaVid = await client.get('videos/index.json');
-                const contentVid = new TextDecoder("utf-8").decode(metaVid.content);
-                remoteMetaList = remoteMetaList.concat(JSON.parse(contentVid));
-            } catch(e) { console.warn('无视频元数据'); }
+            // 视频元数据获取已移除
 
             remoteMetaList.forEach(item => {
                 if (item.likes === undefined) item.likes = 0;
             });
 
             saveCachedMetadata(remoteMetaList);
-            
-            metadataMap = {};
-            remoteMetaList.forEach(item => {
-                metadataMap[item.key] = item;
-            });
-
-            console.log('元数据已从 OSS 同步');
-            renderGallery(allMediaFiles, metadataMap);
-            showCustomAlert('加载完成', 'success'); 
-
+            localMetaList = remoteMetaList; 
         } catch (e) {
-            console.warn('OSS 元数据同步完全失败', e);
-            if (!localMetaList) {
-                showCustomAlert('无法获取元数据，仅显示文件名', 'error');
-            }
+            console.warn('OSS 元数据同步完全失败，使用本地缓存', e);
         }
+
+        // 构建元数据映射
+        if (localMetaList) {
+            localMetaList.forEach(item => {
+                currentMetadataMap[item.key] = item;
+            });
+        }
+
+        showCustomAlert('加载完成', 'success'); 
         
-        setTimeout(() => {
-            if (typeof mediumZoom === 'function') {
-                // 销毁之前的实例（如果存在），防止重复绑定导致的问题
-                // 注意：medium-zoom 没有直接的 destroy 方法用于特定选择器，通常重新调用即可更新
-                
-                mediumZoom('.gallery-grid img', {
-                    background: 'rgba(0, 0, 0, 0.9)', // 深色背景，突出图片
-                    margin: 24,       // 图片边缘与视口的最小距离
-                    scrollOffset: 0,  // 滚动偏移量
-                    container: null,  // 使用默认容器
-                    template: null    // 不使用自定义模板
-                });
-            }
-        }, 100);
+        // 【关键】开始渲染第一页
+        renderNextPage();
+        
+        // 绑定滚动事件监听器
+        window.addEventListener('scroll', handleScroll);
 
     } catch (err) {
         console.error(err);
@@ -283,55 +260,64 @@ async function loadImages() {
     }
 }
 
-function openVideoInNewWindow(videoUrl, title) {
-    const playerHtml = `
-        <!DOCTYPE html>
-        <html lang="zh-CN">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${title} - 播放</title>
-            <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"><\/script>
-            <style>
-                body { margin: 0; padding: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-                video { width: 100%; height: 100%; max-width: 100%; max-height: 100%; }
-            </style>
-        </head>
-        <body>
-            <video id="video" controls autoplay></video>
-            <script>
-                var video = document.getElementById('video');
-                var videoSrc = '${videoUrl}';
-                if (Hls.isSupported()) {
-                    var hls = new Hls();
-                    hls.loadSource(videoSrc);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        video.play().catch(e => console.log("自动播放被拦截", e));
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = videoSrc;
-                    video.addEventListener('loadedmetadata', function() {
-                        video.play().catch(e => console.log("自动播放被拦截", e));
-                    });
-                }
-            <\/script>
-        </body>
-        </html>
-    `;
-    const win = window.open('', '_blank');
-    if (win) {
-        win.document.write(playerHtml);
-        win.document.close();
-    } else {
-        showCustomAlert('请允许弹出窗口以播放视频', 'error');
+// 【新增】渲染下一页数据
+function renderNextPage() {
+    if (isLoadingMore || isAllLoaded) return;
+    
+    isLoadingMore = true;
+    
+    const startIndex = loadedCount;
+    const endIndex = Math.min(startIndex + PAGE_SIZE, allMediaFiles.length);
+    
+    if (startIndex >= allMediaFiles.length) {
+        isAllLoaded = true;
+        isLoadingMore = false;
+        return;
+    }
+
+    const filesToRender = allMediaFiles.slice(startIndex, endIndex);
+    
+    // 调用追加渲染函数
+    appendGallery(filesToRender, currentMetadataMap);
+    
+    loadedCount = endIndex;
+    
+    if (loadedCount >= allMediaFiles.length) {
+        isAllLoaded = true;
+    }
+    
+    isLoadingMore = false;
+    
+    // 重新初始化 zoom，确保新加载的图片也能点击放大
+    setTimeout(() => {
+        if (typeof mediumZoom === 'function') {
+            mediumZoom('.gallery-grid img', {
+                background: 'rgba(0, 0, 0, 0.9)',
+                margin: 24,
+                scrollOffset: 0,
+            });
+        }
+    }, 100);
+}
+
+// 【新增】滚动监听处理函数
+function handleScroll() {
+    if (isAllLoaded || isLoadingMore) return;
+
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    // 当距离底部小于 200px 时，加载下一页
+    if (scrollTop + windowHeight >= documentHeight - 200) {
+        renderNextPage();
     }
 }
 
-function renderGallery(files, metadataMap={}) {
+// 【修改】原 renderGallery 改为 appendGallery，支持追加渲染
+function appendGallery(files, metadataMap={}) {
     const gallery = document.getElementById('gallery');
     const fragment = document.createDocumentFragment();
-    // 获取所有已点赞的文件列表
     const currentLikedItems = getLikedItems();
 
     files.forEach(file => {
@@ -341,38 +327,20 @@ function renderGallery(files, metadataMap={}) {
         card.style.position = 'relative'; 
 
         const fileUrl = `https://${window.ossBucket}.${window.ossRegion}.aliyuncs.com/${file.name}`;
-        const isVideo = file.name.toLowerCase().endsWith('.m3u8');
         
         const meta = metadataMap[file.name] || {};
         const title = meta.title || file.name.split('/').pop(); 
         const author = meta.author || '未知作者';
         const likes = meta.likes || 0;
 
-        // 【修复点】在此处定义 likeClass
-        // 如果当前文件在已点赞列表中，则类名为 'liked'，否则为空字符串
         const likeClass = currentLikedItems.includes(file.name) ? 'liked' : '';
 
-        let mediaHtml = '';
-        
-        if (isVideo) {
-            const playIconUrl = 'https://img.icons8.com/ios-filled/100/ffffff/play.png'; 
-            mediaHtml = `
-                <div class="img-wrapper video-cover-wrapper" style="background-color: #000; display: flex; justify-content: center; align-items: center;">
-                    <img src="${playIconUrl}" style="width: 60px; height: 60px; opacity: 0.8; pointer-events: none;" alt="Play">
-                    <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; padding:2px 6px; border-radius:4px; font-size:12px;">VIDEO</div>
-                </div>
-            `;
-            card.onclick = (e) => {
-                if (e.target.closest('.like-btn') || e.target.closest('.card-menu-btn')) return;
-                openVideoInNewWindow(fileUrl, title);
-            };
-        } else {
-            mediaHtml = `
-                <div class="img-wrapper">
-                    <img src="${fileUrl}" alt="${title}" loading="lazy">
-                </div>
-            `;
-        }
+        // 【移除视频相关 HTML】仅保留图片 HTML
+        const mediaHtml = `
+            <div class="img-wrapper">
+                <img src="${fileUrl}" alt="${title}" loading="lazy">
+            </div>
+        `;
 
         const menuHtml = `
             <div class="card-menu-container">
@@ -385,17 +353,15 @@ function renderGallery(files, metadataMap={}) {
             </div>
         `;
 
-        
         card.innerHTML = `
             ${mediaHtml}
             ${menuHtml}
             <div class="file-info">
                 <div class="file-name" style="font-weight: bold; font-size: 1rem; margin-bottom: 4px;" title="${title}">
-                    ${isVideo ? '🎥 ' : '🖼️ '}${title}
+                    🖼️ ${title}
                 </div>
                 <div class="file-author" style="font-size: 0.85rem; color: #888; display:flex; justify-content:space-between; align-items:center;">
                     <span>👤 ${author}</span>
-                    <!-- 确保这里使用了 likeClass -->
                     <span class="like-btn ${likeClass}" onclick="handleLike('${file.name}', this)" style="user-select:none;">
                         ❤️ <span class="like-count">${likes}</span>
                     </span>
@@ -405,10 +371,11 @@ function renderGallery(files, metadataMap={}) {
         fragment.appendChild(card);
     });
 
-    gallery.innerHTML = ''; 
+    // 【关键】使用 appendChild 而不是 innerHTML = ''，实现追加效果
     gallery.appendChild(fragment);
 }
 
+// ... openVideoInNewWindow 函数已移除，因为不再需要 ...
 
 window.toggleMenu = function(event, fileName) {
     event.stopPropagation(); 
@@ -428,7 +395,6 @@ document.addEventListener('click', () => {
     document.querySelectorAll('.card-dropdown-menu').forEach(m => m.classList.remove('show'));
 });
 
-// 【修改】使用自定义确认弹窗替代 confirm
 function showConfirmDialog(message, onConfirm) {
     const modal = document.createElement('div');
     modal.className = 'custom-alert-overlay';
@@ -456,6 +422,15 @@ function showConfirmDialog(message, onConfirm) {
         close();
         if (onConfirm) onConfirm();
     };
+}
+
+// hashString 辅助函数，如果 utils.js 中没有，需要在这里定义
+async function hashString(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
 }
 
 window.promptDelete = async function(fileName, storedHashedPassword) {
@@ -539,7 +514,8 @@ async function executeDelete(fileName) {
         await client.delete(fileName);
         console.log(`Deleted OSS file: ${fileName}`);
 
-        let indexFile = fileName.startsWith('videos/') ? 'videos/index.json' : 'images/index.json';
+        // 【移除视频索引判断】只处理图片索引
+        let indexFile = 'images/index.json';
         
         let metaList = [];
         try {
@@ -561,7 +537,7 @@ async function executeDelete(fileName) {
 
         showCustomAlert('✅ 删除成功', 'success');
         
-        // 【关键修改】重置刷新计时器，并直接重新加载数据，不再受 20s 限制
+        // 【关键修改】重置刷新计时器，并直接重新加载数据
         lastRefreshTime = 0; 
         
         // 延迟一点让用户看到成功提示，然后刷新
@@ -576,7 +552,7 @@ async function executeDelete(fileName) {
 }
 
 async function handleLike(fileName, btnElement) {
-if (isLiked(fileName)) {
+    if (isLiked(fileName)) {
         showCustomAlert('您已经点赞过该作品了', 'info');
         return;
     }
@@ -584,29 +560,21 @@ if (isLiked(fileName)) {
     const countSpan = btnElement.querySelector('.like-count');
     let currentLikes = parseInt(countSpan.innerText) || 0;
     
-    // 2. 立即更新 UI 计数
     countSpan.innerText = currentLikes + 1;
-    
-    // 3. 【关键】标记为已点赞，改变样式
     btnElement.classList.add('liked');
-    
-    // 4. 保存到本地存储
     addLikeRecord(fileName);
 
-    // 3. 更新本地元数据缓存 (可选，为了保持本地数据一致性)
     let localMetaList = getCachedMetadata() || [];
     let targetItem = localMetaList.find(item => item.key === fileName);
     
     if (targetItem) {
         targetItem.likes = (targetItem.likes || 0) + 1;
     } else {
-        // 如果本地没有元数据，创建一个最小的记录
         targetItem = { key: fileName, likes: 1, title: '', author: '' };
         localMetaList.push(targetItem);
     }
     saveCachedMetadata(localMetaList);
 
-    // 4. 加入同步队列
     if (!likeSyncQueue[fileName]) {
         likeSyncQueue[fileName] = 0;
     }
@@ -623,21 +591,17 @@ async function flushLikeSync() {
     if (Object.keys(likeSyncQueue).length === 0) return;
     try {
         if (!client) await initOSS();
+        
+        // 【移除视频点赞同步】只同步图片
         const imageLikes = {};
-        const videoLikes = {};
         for (const [fileName, increment] of Object.entries(likeSyncQueue)) {
-            if (fileName.toLowerCase().endsWith('.m3u8')) {
-                videoLikes[fileName] = increment;
-            } else {
-                imageLikes[fileName] = increment;
-            }
+            imageLikes[fileName] = increment;
         }
+        
         if (Object.keys(imageLikes).length > 0) {
             await syncLikesToIndex('images/index.json', imageLikes);
         }
-        if (Object.keys(videoLikes).length > 0) {
-            await syncLikesToIndex('videos/index.json', videoLikes);
-        }
+        
         likeSyncQueue = {};
         console.log('所有点赞同步成功');
     } catch (err) {
@@ -682,8 +646,6 @@ async function syncLikesToIndex(indexFilePath, likesMap) {
         console.log(`${indexFilePath} 同步成功`);
     }
 }
-
-// 移除旧的 showStatus 函数，统一使用 showCustomAlert
 
 window.addEventListener('DOMContentLoaded', () => {
     loadImages();

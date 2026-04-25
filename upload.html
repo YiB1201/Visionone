@@ -33,23 +33,29 @@
 
     <div class="upload-main-container">
         <div class="upload-card">
-            <h2>📤 图片/视频上传</h2>
-
+            <h2>📤 图片批量上传</h2>
+    
             <!-- 拖拽/点击上传区域 -->
             <div class="upload-area" id="dropZone">
                 <div class="upload-icon">☁️</div>
-                <div class="upload-text">点击或拖拽图片/视频到此处上传</div>
-                <input type="file" id="fileInput">
+                <!-- 修改提示文字 -->
+                <div class="upload-text">点击或拖拽多张图片到此处上传</div>
+                <!-- 【关键修改】添加 multiple 属性 -->
+                <input type="file" id="fileInput" accept="image/*" multiple>
             </div>
+    
+            <!-- 修改显示文本的逻辑将在 JS 中处理 -->
             <div class="file-name" id="fileNameDisplay"></div>
-
+    
             <div class="meta-inputs">
                 <div style="margin-bottom: 15px;">
-                    <label for="imageTitle" class="meta-label">图片标题</label>
-                    <input type="text" id="imageTitle" class="meta-input" placeholder="请输入图片标题，不填则为文件名">
+                    <!-- 【修改】添加红色星号表示必填，更新 Label -->
+                    <label for="imageTitle" class="meta-label">图片标题 <span style="color:red">*</span></label>
+                    <!-- 【修改】更新 Placeholder 提示规则 -->
+                    <input type="text" id="imageTitle" class="meta-input" placeholder="单图直接使用；多图将自动添加序号 (如: 标题-1)" required>
                     <div style="margin-bottom: 15px;">
                         <label for="deletePassword" class="meta-label">删除密码 <span style="color:red">*</span></label>
-                        <input type="password" id="deletePassword" class="meta-input" placeholder="请设置删除密码，遗忘将无法删除" required>
+                        <input type="password" id="deletePassword" class="meta-input" placeholder="所有文件共用此密码" required>
                     </div>
                 </div>
                 <div>
@@ -57,23 +63,21 @@
                     <input type="text" id="authorName" class="meta-input" placeholder="请输入作者昵称，不填则为匿名">
                 </div>
             </div>
-
+    
             <button class="btn-upload" onclick="handleUpload()" id="uploadBtn">开始上传</button>
-
+    
+            <!-- 进度条容器 -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-bar" id="progressBar"></div>
                 <span class="progress-text" id="progressText">准备上传...</span>
             </div>
-
-            <!-- 结果展示 -->
+    
+            <!-- 结果展示：用于显示详细列表 -->
             <div id="result"></div>
         </div>
     </div>
 
-    <!-- 自定义弹窗 HTML -->
-    <!-- ... 其他代码 ... -->
-
-    <!-- 【修改】确保默认隐藏 -->
+->
     <div id="successModal" class="custom-modal-overlay" style="display: none;">
         <div class="custom-modal">
             <div class="modal-title">✅ 上传成功！</div>
