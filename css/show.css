@@ -653,3 +653,7 @@ nav a:hover {
     border-radius: 6px;
     cursor: pointer;
 }
+
+.medium-zoom-image--opened {
+    object-fit: contain !important;
+}

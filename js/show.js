@@ -261,10 +261,15 @@ async function loadImages() {
         
         setTimeout(() => {
             if (typeof mediumZoom === 'function') {
+                // 销毁之前的实例（如果存在），防止重复绑定导致的问题
+                // 注意：medium-zoom 没有直接的 destroy 方法用于特定选择器，通常重新调用即可更新
+                
                 mediumZoom('.gallery-grid img', {
-                    background: 'rgba(0, 0, 0, 0.9)',
-                    margin: 24,
-                    scrollOffset: 0,
+                    background: 'rgba(0, 0, 0, 0.9)', // 深色背景，突出图片
+                    margin: 24,       // 图片边缘与视口的最小距离
+                    scrollOffset: 0,  // 滚动偏移量
+                    container: null,  // 使用默认容器
+                    template: null    // 不使用自定义模板
                 });
             }
         }, 100);
