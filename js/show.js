@@ -5,6 +5,7 @@ let client = null;
 const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
 // 【新增】本地缓存 Key
 const LOCAL_META_KEY = 'oss_gallery_metadata_v1';
+const LOCAL_LIKED_KEY = 'oss_gallery_liked_items_v1';
 
 // 刷新限制变量
 let lastRefreshTime = 0;
@@ -51,6 +52,41 @@ async function initOSS() {
         console.error(err);
         showCustomAlert(`初始化失败: ${err.message}`, 'error');
         return false;
+    }
+}
+
+// 【新增】获取本地已点赞列表
+function getLikedItems() {
+    try {
+        const liked = localStorage.getItem(LOCAL_LIKED_KEY);
+        return liked ? JSON.parse(liked) : [];
+    } catch (e) {
+        console.warn('解析已点赞列表失败', e);
+        return [];
+    }
+}
+
+// 【新增】保存本地已点赞列表
+function saveLikedItems(likedList) {
+    try {
+        localStorage.setItem(LOCAL_LIKED_KEY, JSON.stringify(likedList));
+    } catch (e) {
+        console.warn('保存已点赞列表失败', e);
+    }
+}
+
+// 【新增】检查是否已点赞
+function isLiked(fileName) {
+    const likedList = getLikedItems();
+    return likedList.includes(fileName);
+}
+
+// 【新增】添加点赞记录
+function addLikeRecord(fileName) {
+    const likedList = getLikedItems();
+    if (!likedList.includes(fileName)) {
+        likedList.push(fileName);
+        saveLikedItems(likedList);
     }
 }
 
@@ -290,6 +326,8 @@ function openVideoInNewWindow(videoUrl, title) {
 function renderGallery(files, metadataMap={}) {
     const gallery = document.getElementById('gallery');
     const fragment = document.createDocumentFragment();
+    // 获取所有已点赞的文件列表
+    const currentLikedItems = getLikedItems();
 
     files.forEach(file => {
         const card = document.createElement('div');
@@ -304,6 +342,10 @@ function renderGallery(files, metadataMap={}) {
         const title = meta.title || file.name.split('/').pop(); 
         const author = meta.author || '未知作者';
         const likes = meta.likes || 0;
+
+        // 【修复点】在此处定义 likeClass
+        // 如果当前文件在已点赞列表中，则类名为 'liked'，否则为空字符串
+        const likeClass = currentLikedItems.includes(file.name) ? 'liked' : '';
 
         let mediaHtml = '';
         
@@ -338,6 +380,7 @@ function renderGallery(files, metadataMap={}) {
             </div>
         `;
 
+        
         card.innerHTML = `
             ${mediaHtml}
             ${menuHtml}
@@ -347,19 +390,20 @@ function renderGallery(files, metadataMap={}) {
                 </div>
                 <div class="file-author" style="font-size: 0.85rem; color: #888; display:flex; justify-content:space-between; align-items:center;">
                     <span>👤 ${author}</span>
-                    <span class="like-btn" onclick="handleLike('${file.name}', this)" style="cursor:pointer; user-select:none;">
+                    <!-- 确保这里使用了 likeClass -->
+                    <span class="like-btn ${likeClass}" onclick="handleLike('${file.name}', this)" style="user-select:none;">
                         ❤️ <span class="like-count">${likes}</span>
                     </span>
                 </div>
             </div>
         `;
-
         fragment.appendChild(card);
     });
 
     gallery.innerHTML = ''; 
     gallery.appendChild(fragment);
 }
+
 
 window.toggleMenu = function(event, fileName) {
     event.stopPropagation(); 
@@ -527,22 +571,37 @@ async function executeDelete(fileName) {
 }
 
 async function handleLike(fileName, btnElement) {
+if (isLiked(fileName)) {
+        showCustomAlert('您已经点赞过该作品了', 'info');
+        return;
+    }
+
     const countSpan = btnElement.querySelector('.like-count');
     let currentLikes = parseInt(countSpan.innerText) || 0;
     
+    // 2. 立即更新 UI 计数
     countSpan.innerText = currentLikes + 1;
     
+    // 3. 【关键】标记为已点赞，改变样式
+    btnElement.classList.add('liked');
+    
+    // 4. 保存到本地存储
+    addLikeRecord(fileName);
+
+    // 3. 更新本地元数据缓存 (可选，为了保持本地数据一致性)
     let localMetaList = getCachedMetadata() || [];
     let targetItem = localMetaList.find(item => item.key === fileName);
     
     if (targetItem) {
         targetItem.likes = (targetItem.likes || 0) + 1;
     } else {
+        // 如果本地没有元数据，创建一个最小的记录
         targetItem = { key: fileName, likes: 1, title: '', author: '' };
         localMetaList.push(targetItem);
     }
     saveCachedMetadata(localMetaList);
 
+    // 4. 加入同步队列
     if (!likeSyncQueue[fileName]) {
         likeSyncQueue[fileName] = 0;
     }
