@@ -222,24 +222,52 @@ nav a:hover {
 }
 
 .like-btn {
-    transition: transform 0.2s ease;
+    transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 20px;
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(255, 255, 255, 0.2);
+    /* 轻微背景，让白色爱心可见 */
+    color: #ffffff;
+    /* 【修改】默认爱心颜色为白色 */
+    font-weight: normal;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    /* 增加文字阴影，防止白色爱心在浅色背景上看不清 */
 }
 
 .like-btn:hover {
     transform: scale(1.1);
-    color: #e74c3c;
-    background: rgba(231, 76, 60, 0.1);
+    color: #ffcccc;
+    /* 悬停时变为浅红色/粉色提示可点击 */
+    background: rgba(255, 255, 255, 0.4);
 }
 
 .like-btn:active {
     transform: scale(0.95);
+}
+
+/* 【修改】已点赞状态 */
+.like-btn.liked {
+    color: #ff4757;
+    /* 红色爱心 */
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.8);
+    /* 已点赞后背景变亮，突出红色 */
+    text-shadow: none;
+    /* 移除阴影 */
+    cursor: default !important;
+}
+
+/* 如果因为 pointer-events: none 导致 hover 效果消失，我们可以保留 hover 但改变 cursor */
+.like-btn.liked:hover {
+    transform: none;
+    /* 已点赞后不再缩放 */
+    color: #ff4757;
+    /* 保持红色 */
+    background: rgba(255, 255, 255, 0.8);
 }
 
 
