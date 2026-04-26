@@ -1,4 +1,14 @@
 /* shows.css */
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    /* 【新增】禁止横向滚动，确保移动端不出现左右滑动条 */
+    overflow-x: hidden;
+    width: 100%;
+}
 :root {
     --primary-color: #007bff;
     --primary-hover: #0056b3;
