@@ -88,6 +88,44 @@
             margin-bottom: 20px;
             border-left: 5px solid #007bff;
             padding-left: 10px;
+            
+            /* 【新增】使用 Flex 布局让标题和链接在同一行 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 【新增】“查看更多”链接的样式 */
+        .view-more-link {
+            font-size: 0.85rem;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px; /* 圆角胶囊形状 */
+            background-color: rgba(0, 123, 255, 0.1); /* 浅蓝色背景 */
+            transition: all 0.3s ease; /* 所有属性平滑过渡 */
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid transparent; /* 预留边框位置防止抖动 */
+        }
+
+        .view-more-link:hover {
+            color: #fff; /* 悬停时文字变白 */
+            background-color: #007bff; /* 悬停时背景变深蓝 */
+            transform: translateX(3px); /* 轻微向右移动，增强引导感 */
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3); /* 添加阴影 */
+        }
+
+        .view-more-link::after {
+            content: '→'; 
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .view-more-link:hover::after {
+            transform: translateX(3px); /* 箭头单独再向右动一点 */
         }
 
         .photo-grid {
@@ -108,6 +146,8 @@
             justify-content: center;
             color: #666;
             font-size: 0.9rem;
+
+            cursor: pointer;
         }
 
         .photo-item:hover {
@@ -221,7 +261,10 @@
     </section>
 
     <section class="gallery-section" id="gallery">
-        <h2 class="section-title">每周精选</h2>
+        <div class="section-title">
+            <span>每周精选</span>
+            <a href="./shows.html" class="view-more-link">查看更多</a>
+        </div>
         <!-- 添加 ID 以便 JS 操作 -->
         <div class="photo-grid" id="weeklyPhotoGrid">
             <!-- JS 将在这里动态插入图片 -->
@@ -312,6 +355,9 @@
                             </div>
                             <div class="like-badge">${likes}</div>
                         `;
+                    itemDiv.addEventListener('click', () => {
+                        window.location.href = './shows.html';
+                    });
 
                     gridContainer.appendChild(itemDiv);
                 });

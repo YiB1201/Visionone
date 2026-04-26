@@ -1,5 +1,6 @@
 // shows.js
 let client = null;
+let galleryViewer = null;
 
 // STS 签名接口地址
 const STS_API_URL = 'https://oss-upload-sign-uhwltmbygx.cn-hangzhou.fcapp.run';
@@ -244,6 +245,7 @@ async function loadImages() {
         }
 
         showCustomAlert('加载完成', 'success'); 
+        initViewerJS();
         
         // 【关键】开始渲染第一页
         renderNextPage();
@@ -258,6 +260,40 @@ async function loadImages() {
         btn.disabled = false;
         btn.innerText = '🔄 刷新列表';
     }
+}
+
+function initViewerJS() {
+    if (galleryViewer) {
+        // 如果已经存在，销毁旧实例以重新绑定（或者直接使用 update，但首次加载建议新建）
+        galleryViewer.destroy();
+    }
+    
+    const gallery = document.getElementById('gallery');
+    
+    galleryViewer = new Viewer(gallery, {
+        inline: false, // 不以_inline_模式显示，而是模态框
+        button: false,  // 显示右上角关闭按钮
+        navbar: false,  // 显示底部导航栏（缩略图、比例等）
+        title: true,   // 显示标题
+        toolbar: true, // 显示工具栏（放大、缩小、旋转等）
+        tooltip: true, // 显示缩放比例提示
+        movable: true, // 可移动
+        zoomable: true,// 【核心】可缩放
+        rotatable: false,// 可旋转
+        scalable: false,// 可翻转
+        transition: true,// 开启过渡动画
+        fullscreen: true,// 支持全屏
+        keyboard: false, // 支持键盘操作
+        
+        // 当图片查看器打开时，禁止背景滚动
+        show() {
+            document.body.style.overflow = 'hidden';
+        },
+        // 当图片查看器关闭时，恢复背景滚动
+        hidden() {
+            document.body.style.overflow = '';
+        }
+    });
 }
 
 // 【新增】渲染下一页数据
@@ -290,12 +326,8 @@ function renderNextPage() {
     
     // 重新初始化 zoom，确保新加载的图片也能点击放大
     setTimeout(() => {
-        if (typeof mediumZoom === 'function') {
-            mediumZoom('.gallery-grid img', {
-                background: 'rgba(0, 0, 0, 0.9)',
-                margin: 24,
-                scrollOffset: 0,
-            });
+        if (galleryViewer) {
+            galleryViewer.update();
         }
     }, 100);
 }
@@ -338,7 +370,7 @@ function appendGallery(files, metadataMap={}) {
         // 【移除视频相关 HTML】仅保留图片 HTML
         const mediaHtml = `
             <div class="img-wrapper">
-                <img src="${fileUrl}" alt="${title}" loading="lazy">
+                <img src="${fileUrl}" alt="${title}" loading="lazy" data-title="${title}">
             </div>
         `;
 
